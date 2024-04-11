@@ -35,6 +35,25 @@ target_link_libraries(MolFFSim PRIVATE ${EIGEN_LIBRARIES})
 # Link the autodiff library
 target_link_libraries(MolFFSim PRIVATE ${AUTODIFF_LIBRARIES})
 
+# Install MolFFSim
+install(
+    TARGETS MolFFSim
+    DESTINATION /usr/local/share/MolFFSim
+)
 
+install(CODE "execute_process(COMMAND ln -sf /usr/local/share/MolFFSim/MolFFSim /usr/local/bin/MolFFSim)")
 
+# Install the atomic basis functions data files
+file(GLOB atomic_basis "${CMAKE_SOURCE_DIR}/ATOMIC_BASIS/*.txt")
+install(
+    FILES ${atomic_basis}
+    DESTINATION /usr/local/share/MolFFSim/ATOMIC_BASIS/
+)
+
+# Install the exchange and correlation coefficient data files
+file(GLOB xc_coefficients "${CMAKE_SOURCE_DIR}/XC_COEFFICIENTS/*.txt")
+install(
+    FILES ${xc_coefficients}
+    DESTINATION /usr/local/share/MolFFSim/XC_COEFFICIENTS/
+)
 

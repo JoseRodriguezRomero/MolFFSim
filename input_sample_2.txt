@@ -1,8 +1,8 @@
 system_charge        0
 is_periodic          true true false
 periodic_box_sizes   300 300 300
-atomic_basis         basis_collection_1
-xc_coefficients      ecp_xc_collection_1
+atomic_basis         ecp_collection_1
+xc_coefficients      ecp_collection_1
 
 BEGIN MOLECULE_LIST
 BEGIN MOLECULE H2O

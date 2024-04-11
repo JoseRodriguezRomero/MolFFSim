@@ -120,4 +120,4 @@ Leveraging this understanding, the exchange and correlation functional is divide
 For further details, please consult `XC_COEFFICIENTS.md`.
 
 ## Citing this program
-If you find this program useful please consider citing this repository with the following Bibtex entry:
+If you find this program useful please consider citing this repository with the following BibTeX entry:
