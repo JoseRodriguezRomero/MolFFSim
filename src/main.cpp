@@ -1,3 +1,5 @@
+#define MAX_PRINT_BUFFER_SIZE       256
+
 #include <fstream>
 #include <iostream>
 
@@ -55,35 +57,60 @@ int main(int argc, char** argv) {
         }
     }
     
-    // Ugly copying and pasting, but for the time this will do...
-    if (diff_is_forward) {
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    
+    if (point_energy) {
+        MolFFSim::System<double> system;
+        system.ReadInputFile(input_file);
+        input_file.close();
+        
+        std::cout << system << std::endl;;
+        
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                 "Total Energy:",0.0);
+        std::cout << buffer << std::endl;
+        
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                 "Interaction Energy:",0.0);
+        std::cout << buffer << std::endl << std::endl;
+    }
+    else if (diff_is_forward) {
         MolFFSim::System<autodiff::dual> system;
         system.ReadInputFile(input_file);
+        input_file.close();
         
-        if (point_energy) {
-            system.pointEnergyCalculation();
-            std::cout << system;
-        }
-        else if (system_geom_optim) {
-            system.systemGeomOptimization();
+        if (system_geom_optim) {
+            std::cout << system << std::endl;;
+            
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                     "Total Energy:",0.0);
+            std::cout << buffer << std::endl;
+            
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                     "Interaction Energy:",0.0);
+            std::cout << buffer << std::endl << std::endl;
         }
         else if (molec_geom_optim) {
-            system.molecGeomOptimization();
         }
     }
     else {
         MolFFSim::System<autodiff::var> system;
         system.ReadInputFile(input_file);
+        input_file.close();
         
-        if (point_energy) {
-            system.pointEnergyCalculation();
-            std::cout << system;
-        }
-        else if (system_geom_optim) {
-            system.systemGeomOptimization();
+        if (system_geom_optim) {
+            std::cout << system << std::endl;;
+            
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                     "Total Energy:",double(system.SystemEnergy()));
+            std::cout << buffer << std::endl;
+            
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+                     "Interaction Energy:",
+                     double(system.SystemInteractionEnergy()));
+            std::cout << buffer << std::endl << std::endl;
         }
         else if (molec_geom_optim) {
-            system.molecGeomOptimization();
         }
     }
     

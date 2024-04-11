@@ -37,88 +37,24 @@
 
 #include "molecule.hpp"
 
-std::string labelFromAtomicNumber(const unsigned atomic_number) {
-    switch (atomic_number) {
-        case 1:
-            return "H";
-            break;
-        case 2:
-            return "He";
-            break;
-        case 3:
-            return "Li";
-            break;
-        case 4:
-            return "Be";
-            break;
-        case 5:
-            return "B";
-            break;
-        case 6:
-            return "C";
-            break;
-        case 7:
-            return "N";
-            break;
-        case 8:
-            return "O";
-            break;
-        case 9:
-            return "F";
-            break;
-        case 10:
-            return "Ne";
-            break;
-        case 11:
-            return "Na";
-            break;
-        case 12:
-            return "Mg";
-            break;
-        case 13:
-            return "Al";
-            break;
-        case 14:
-            return "Si";
-            break;
-        case 15:
-            return "P";
-            break;
-        case 16:
-            return "S";
-            break;
-        case 17:
-            return "Cl";
-            break;
-        case 18:
-            return "Ar";
-            break;
-        default:
-            break;
-    }
-
-    // Dummy label for unsupported elements.
-    return "XX";
-}
-
 void XCCombRule1(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 4; i++) {
-        xc_ab[i] = (xc_a[i] * xc_b[i]) / (xc_a[i] + xc_b[i]);
+        xc_ab[i] = (xc_a[i] + xc_b[i]) / 2.0;
     }
 }
 
 void XCCombRule2(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 4; i++) {
-        xc_ab[i] = xc_a[i] + xc_b[i];
+        xc_ab[i] = sqrt(xc_a[i] * xc_b[i]);
     }
 }
 
 void XCCombRule3(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 4; i++) {
-        xc_ab[i] = xc_a[i] * xc_b[i];
+        xc_ab[i] = (xc_a[i] * xc_b[i]) / (xc_a[i] + xc_b[i]);
     }
 }
 
@@ -187,6 +123,18 @@ void Atom<T>::addCloud(const double c_coeff, const double lambda_coeff) {
 }
 
 template<typename T>
+void Atom<T>::addClouds(const std::vector<double> &c_coeffs,
+                        const std::vector<double> &lambda_coeffs) {
+    cloud_c_coeffs.reserve(cloud_c_coeffs.size() + c_coeffs.size());
+    cloud_lambda_coeffs.reserve(cloud_lambda_coeffs.size() + c_coeffs.size());
+    
+    for (unsigned i = 0; i < c_coeffs.size(); i++) {
+        cloud_c_coeffs.push_back(c_coeffs[i]);
+        cloud_lambda_coeffs.push_back(lambda_coeffs[i]);
+    }
+}
+
+template<typename T>
 T Atom<T>::SelfEnergy() const {
     T energy = 0;
     
@@ -252,11 +200,11 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
     T atoms_dist = Distance(other);
     
     // Nuclei - Nuclei
-    energy += atomic_number*other.AtomicNumber()/atoms_dist;
+    energy += z_eff*other.EffAtomicNumber()/atoms_dist;
     
     // Cloud - Nuclei
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
-        double c_coeff = other.AtomicNumber() * cloud_c_coeffs[i];
+        double c_coeff = other.EffAtomicNumber() * cloud_c_coeffs[i];
         double lambda_coeff = cloud_lambda_coeffs[i];
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
@@ -268,7 +216,7 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
     
     // Nuclei - Cloud
     for (unsigned i = 0; i < other.CloudCCoeffs().size(); i++) {
-        double c_coeff = atomic_number * other.CloudCCoeffs()[i];
+        double c_coeff = z_eff * other.CloudCCoeffs()[i];
         double lambda_coeff = other.CloudLambdaCoeffs()[i];
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
@@ -414,6 +362,17 @@ void Molecule<T>::addAtom(const MolFFSim::Atom<double> &atom) {
 }
 
 template<typename T>
+void Molecule<T>::setXCRule(MolFFSim::XCRules xc_rule) {    
+    for (auto it = atoms.begin(); it != atoms.end(); it++) {
+        it->setXCRule(xc_rule);
+    }
+    
+    for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
+        it->setXCRule(xc_rule);
+    }
+}
+
+template<typename T>
 void Molecule<T>::removeAtom(const unsigned atom_index) {
     atoms.erase(atoms.begin() + atom_index);
     atoms_rot.erase(atoms_rot.begin() + atom_index);
@@ -469,6 +428,43 @@ void Molecule<T>::applyRotationAndTranslation() {
         
         atom_new_pos = center_qr * atom_new_pos + center_r;
         atoms_rot[i].setPos(atom_new_pos);
+    }
+}
+
+template<typename T>
+void Molecule<T>::createElectronClouds(
+    const std::unordered_map<unsigned,std::vector<double>> &c_coeffs,
+    const std::unordered_map<unsigned,std::vector<double>> &lambda_coeffs) {
+    for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
+        it->addClouds(c_coeffs.find(it->AtomicNumber())->second,
+                      lambda_coeffs.find(it->AtomicNumber())->second);
+    }
+    
+    for (auto it = atoms.begin(); it != atoms.end(); it++) {
+        it->addClouds(c_coeffs.find(it->AtomicNumber())->second,
+                      lambda_coeffs.find(it->AtomicNumber())->second);
+    }
+}
+
+template<typename T>
+void Molecule<T>::setECP() {
+    for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
+        it->setECP();
+    }
+    
+    for (auto it = atoms.begin(); it != atoms.end(); it++) {
+        it->setECP();
+    }
+}
+
+template<typename T>
+void Molecule<T>::setFullE() {
+    for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
+        it->setFullE();
+    }
+    
+    for (auto it = atoms.begin(); it != atoms.end(); it++) {
+        it->setFullE();
     }
 }
 
@@ -529,8 +525,6 @@ void Molecule<T>::operator=(const Molecule& other) {
     
     is_periodic = other.isPeriodic();
     box_side_len = other.PeriodicBoxSizes();
-    
-    xc_rule = other.XCRule();
 }
 
 template<typename T>
@@ -549,7 +543,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
     molec.SelfEnergy(); // Run this to ensure the molecule rotation has been
                         // updated before doing any printing.
 
-//    for (int i = 0; i < 116; i++) {
+//    for (int i = 0; i < 112; i++) {
 //        os << "-";
 //    }
 //    os << std::endl;
@@ -569,8 +563,8 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
     auto it_begin = molec.AtomsRotAndTrans().begin();
     for (auto it = it_begin; it != it_end; it++) {
         snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
-                 "%12s %25.8lf %25.8lf %25.8lf %25.8lf",
-                 labelFromAtomicNumber(it->AtomicNumber()).c_str(),
+                 "%8s %25.8lf %25.8lf %25.8lf %25.8lf",
+                 LabelFromAtomicNumber(it->AtomicNumber()).c_str(),
                  double(it->Pos().x())*BOHR_TO_ANGSTROM,
                  double(it->Pos().y())*BOHR_TO_ANGSTROM,
                  double(it->Pos().z())*BOHR_TO_ANGSTROM,
@@ -578,7 +572,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
         os << buffer << std::endl;
     }
     
-//    for (int i = 0; i < 116; i++) {
+//    for (int i = 0; i < 112; i++) {
 //        os << "-";
 //    }
 //    os << std::endl;

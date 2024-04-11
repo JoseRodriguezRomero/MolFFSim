@@ -2,71 +2,15 @@
 #define DEFAULT_PERIODIC_SIZES      {50, 50, 50}
 #define DEFAULT_SYSTEM_CHARGE       0
 
+#define XC_COEFFS_BASE_DIR          "/usr/local/share/MolFFSim/XC_COEFFICIENTS/"
+#define ATOMIC_BASIS_BASE_DIR       "/usr/local/share/MolFFSim/ATOMIC_BASIS/"
+
 #define MAX_MOLEC_LABEL_SIZE        256
 #define MAX_PRINT_BUFFER_SIZE       256
 
 #define BOHR_TO_ANGSTROM            0.529177249
 
 #include "system.hpp"
-
-unsigned AtomicNumberFromName(const std::string &element) {
-    if (element == "H") {
-        return 1;
-    }
-    else if (element == "He") {
-        return 2;
-    }
-    else if (element == "Li") {
-        return 3;
-    }
-    else if (element == "Be") {
-        return 4;
-    }
-    else if (element == "B") {
-        return 5;
-    }
-    else if (element == "C") {
-        return 6;
-    }
-    else if (element == "N") {
-        return 7;
-    }
-    else if (element == "O") {
-        return 8;
-    }
-    else if (element == "F") {
-        return 9;
-    }
-    else if (element == "Ne") {
-        return 10;
-    }
-    else if (element == "Na") {
-        return 11;
-    }
-    else if (element == "Mg") {
-        return 12;
-    }
-    else if (element == "Al") {
-        return 13;
-    }
-    else if (element == "Si") {
-        return 14;
-    }
-    else if (element == "P") {
-        return 15;
-    }
-    else if (element == "S") {
-        return 16;
-    }
-    else if (element == "Cl") {
-        return 17;
-    }
-    else if (element == "Ar") {
-        return 18;
-    }
-    
-    return 0;
-}
 
 using namespace MolFFSim;
 
@@ -79,10 +23,25 @@ System<T>::System() {
 
 template<typename T>
 System<T>::~System() {
-}
-
-template<typename T>
-void System<T>::PolarizeMolecules() {
+//    std::cout << std::endl;
+//    for (auto it1 = molecule_list.begin(); it1 != molecule_list.end(); it1++) {
+//        auto it2_end = it1->second.Atoms().cend();
+//        auto it2_begin = it1->second.Atoms().cbegin();
+//        for (auto it2 = it2_begin; it2 != it2_end; it2++) {
+//            char buffer[256];
+//            snprintf(buffer,256,"%5s %15.5lf",
+//                     LabelFromAtomicNumber(it2->AtomicNumber()).c_str(),
+//                     it2->CloudCCoeffs().at(0));
+//            std::cout << buffer << std::endl;
+//            
+//            auto it3_end = it2->CloudCCoeffs().cend();
+//            auto it3_begin = it2->CloudCCoeffs().cbegin() + 1;
+//            for (auto it3 = it3_begin; it3 != it3_end; it3++) {
+//                snprintf(buffer,256,"%5s %15.5lf", " ", *it3);
+//                std::cout << buffer << std::endl;
+//            }
+//        }
+//    }
 }
 
 template<typename T>
@@ -159,10 +118,10 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
         }
         else if (line.find("atomic_basis") != std::string::npos) {
             char dummy[64];
-            char atom_basis_funcs_collection[256];
+            char atom_basis_collection[256];
             
             int valid_args = sscanf(line.c_str(),"%s %s",dummy,
-                                    atom_basis_funcs_collection);
+                                    atom_basis_collection);
             
             if (valid_args != 2) {
                 std::cout << "Incorrect arguments for \"atomic_basis\".";
@@ -170,7 +129,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                 exit(1);
             }
             
-            this->atom_basis_funcs_collection = atom_basis_funcs_collection;
+            this->atom_basis_collection = atom_basis_collection;
         }
         else if (line.find("xc_coefficients") != std::string::npos) {
             char dummy[64];
@@ -231,7 +190,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                         }
                         
                         unsigned atomic_number =
-                            AtomicNumberFromName(element_label);
+                            AtomicNumberFromLabel(element_label);
                         
                         if (!atomic_number) {
                             std::cout << "Unsupported element in molecule ";
@@ -370,21 +329,183 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
             }
         }
     }
+    
+    readXCCoefficients(xc_coeff_collection);
+    readAtomicBasisSet(atom_basis_collection);
+    
+    if (is_ecp) {
+        setECP();
+    }
+    else {
+        setFullE();
+    }
+    
+    setXCRule();
 }
 
 template<typename T>
-void System<T>::molecGeomOptimization() {
+void System<T>::readXCCoefficients(const std::string &xc_coeff_collection) {
+    this->xc_coeff_collection = xc_coeff_collection;
     
+    const std::string file_name =
+        XC_COEFFS_BASE_DIR + xc_coeff_collection + ".txt";
+    
+    std::ifstream data_file;
+    data_file.open(file_name, std::fstream::in);
+    
+    std::string line;
+    while (std::getline(data_file, line)) {
+        if (line.find("comb_rule") != std::string::npos) {
+            char dummy[32], basis_type[32];
+            int num_args = sscanf(line.c_str(),"%s %s",dummy,basis_type);
+            
+            if (num_args != 2) {
+                std::cout << xc_coeff_collection << ".txt is tampered!";
+                std::cout << std::endl;
+                exit(1);
+            }
+            
+            if (!strcmp(basis_type,"rule_1")) {
+                xc_rule = rule1;
+            }
+            else if (!strcmp(basis_type,"rule_2")) {
+                xc_rule = rule2;
+            }
+            else if (!strcmp(basis_type,"rule_3")) {
+                xc_rule = rule3;
+            }
+            else {
+                std::cout << xc_coeff_collection << ".txt is tampered!";
+                std::cout << std::endl;
+                exit(1);
+            }
+            
+            continue;
+        }
+        
+        char elem_label[8];
+        double xc_coeffs[8];
+        int num_args = sscanf(line.c_str(),"%s %lf %lf %lf %lf %lf %lf %lf %lf",
+                              elem_label, xc_coeffs, xc_coeffs + 1,
+                              xc_coeffs + 2, xc_coeffs + 3, xc_coeffs + 4,
+                              xc_coeffs + 5, xc_coeffs + 6, xc_coeffs + 7);
+        
+        if (num_args != 9) {
+            std::cout << xc_coeff_collection << ".txt is tampered!";
+            std::cout << std::endl;
+            exit(1);
+        }
+        
+        unsigned atomic_num = AtomicNumberFromLabel(elem_label);
+        if (atomic_num == 0) {
+            std::cout << atom_basis_collection << ".txt is tampered!";
+            std::cout << std::endl;
+            exit(1);
+        }
+        
+        elem_xc_coeff[atomic_num] = std::vector<double>();
+        elem_xc_coeff[atomic_num].insert(elem_xc_coeff[atomic_num].begin(),
+                                         xc_coeffs, xc_coeffs + 8);
+    }
+    
+    data_file.close();
 }
 
 template<typename T>
-void System<T>::pointEnergyCalculation() {
+void System<T>::readAtomicBasisSet(const std::string &atom_basis_collection) {
+    this->atom_basis_collection = atom_basis_collection;
     
-}
-
-template<typename T>
-void System<T>::systemGeomOptimization() {
+    const std::string file_name = 
+        ATOMIC_BASIS_BASE_DIR + atom_basis_collection + ".txt";
     
+    std::ifstream data_file;
+    data_file.open(file_name, std::fstream::in);
+        
+    std::string line;
+    std::string current_elem = ".";
+    while (std::getline(data_file, line)) {
+        if (line.find("basis_type") != std::string::npos) {
+            char dummy[32], basis_type[32];
+            int num_args = sscanf(line.c_str(),"%s %s",dummy,basis_type);
+            
+            if (num_args != 2) {
+                std::cout << atom_basis_collection << ".txt is tampered!";
+                std::cout << std::endl;
+                exit(1);
+            }
+            
+            if (!strcmp(basis_type,"FullE")) {
+                is_ecp = false;
+            }
+            else if (!strcmp(basis_type,"ECP")) {
+                is_ecp = true;
+            }
+            else {
+                std::cout << atom_basis_collection << ".txt is tampered!";
+                std::cout << std::endl;
+                exit(1);
+            }
+            
+            continue;
+        }
+        
+        char elem_label[8];
+        double c_coeffs[3], lambda_coeffs[3];
+        int num_args = sscanf(line.c_str(),"%s %lf %lf %lf %lf %lf %lf",
+                              elem_label, c_coeffs,lambda_coeffs,
+                              c_coeffs + 1, lambda_coeffs + 1,
+                              c_coeffs + 2, lambda_coeffs + 2);
+        
+        if (num_args != 7) {
+            std::cout << atom_basis_collection << ".txt is tampered!";
+            std::cout << std::endl;
+            exit(1);
+        }
+        
+        if (strcmp(elem_label,".")) {
+            current_elem = elem_label;
+        }
+        
+        if (current_elem == ".") {
+            std::cout << atom_basis_collection << ".txt is tampered!";
+            std::cout << std::endl;
+            exit(1);
+        }
+        
+        std::vector<double> new_c_coeffs;
+        new_c_coeffs.insert(new_c_coeffs.begin(),c_coeffs,c_coeffs+3);
+        
+        std::vector<double> new_lambda_coeffs;
+        new_lambda_coeffs.insert(new_lambda_coeffs.begin(),lambda_coeffs,
+                                 lambda_coeffs+3);
+        
+        unsigned atomic_num = AtomicNumberFromLabel(current_elem);
+        if (atomic_num == 0) {
+            std::cout << atom_basis_collection << ".txt is tampered!";
+            std::cout << std::endl;
+            exit(1);
+        }
+        
+        if (elem_c_coeff.find(atomic_num) == elem_c_coeff.end()) {
+            elem_c_coeff[atomic_num] = std::vector<double>();
+            elem_lambda_coeff[atomic_num] = std::vector<double>();
+        }
+        
+        for (unsigned i = 0; i < 3; i++) {
+            elem_c_coeff[atomic_num].push_back(new_c_coeffs[i]);
+            elem_lambda_coeff[atomic_num].push_back(new_lambda_coeffs[i]);
+        }
+    }
+    
+    data_file.close();
+    
+    for (auto it1 = molecules.begin(); it1 != molecules.end(); it1++) {
+        it1->createElectronClouds(elem_c_coeff,elem_lambda_coeff);
+    }
+    
+    for (auto it1 = molecule_list.begin(); it1 != molecule_list.end(); it1++) {
+        it1->second.createElectronClouds(elem_c_coeff,elem_lambda_coeff);
+    }
 }
 
 template<typename T>
@@ -420,20 +541,80 @@ void System<T>::setPeriodicBoxSizes(const std::vector<double> box_side_len) {
     }
 }
 
+template<typename T>
+void System<T>::PolarizeMolecules() {
+    
+}
+
+template<typename T>
+T System<T>::SystemEnergy() {
+    PolarizeMolecules();
+    
+    return T(0);
+}
+
+template<typename T>
+T System<T>::SystemInteractionEnergy() {
+    return T(0);
+}
+
+template<typename T>
+void System<T>::MonomerPolarizeMolecules() {
+    
+}
+
+template<typename T>
+void System<T>::getMonomerEnergies() {
+    
+}
+
+template <typename T>
+void System<T>::setECP() {
+    for (auto it = molecules.begin(); it != molecules.end(); it++) {
+        it->setECP();
+    }
+    
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        it->second.setECP();
+    }
+}
+
+template <typename T>
+void System<T>::setFullE() {
+    for (auto it = molecules.begin(); it != molecules.end(); it++) {
+        it->setFullE();
+    }
+    
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        it->second.setFullE();
+    }
+}
+
+template <typename T>
+void System<T>::setXCRule() {
+    for (auto it = molecules.begin(); it != molecules.end(); it++) {
+        it->setXCRule(xc_rule);
+    }
+    
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        it->second.setXCRule(xc_rule);
+    }
+}
+
 template <typename T>
 std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
     char buffer[MAX_PRINT_BUFFER_SIZE];
-    for (int i = 0; i < 116; i++) {
+    for (int i = 0; i < 112; i++) {
         os << "-";
     }
     os << std::endl;
     
-    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%12s %25s %25s %25s %25s",
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%8s %25s %25s %25s %25s",
              "Element","x [Angstrom]","y [Angstrom]","z [Angstrom]",
              "Partial charge");
     os << buffer << std::endl;
     
-    for (int i = 0; i < 116; i++) {
+    for (int i = 0; i < 112; i++) {
         os << "-";
     }
     os << std::endl;
@@ -445,21 +626,11 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
         
         os << system.Molecules()[i];
         
-        for (int i = 0; i < 116; i++) {
+        for (int i = 0; i < 112; i++) {
             os << "-";
         }
         os << std::endl;
     }
-    
-    os << std::endl;
-    
-    snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-             "Total Energy:",0.0);
-    os << buffer << std::endl;
-    
-    snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-             "Interaction Energy:",0.0);
-    os << buffer << std::endl << std::endl;
     
     return os;
 }

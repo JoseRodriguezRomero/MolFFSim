@@ -2,7 +2,7 @@
 ![Static Badge](https://img.shields.io/badge/MacOS-runs-green?logo=apple&logoColor=white) 
 ![Static Badge](https://img.shields.io/badge/Windows-unsupported-red?logo=windows&logoColor=white) \
 ![Static Badge](https://img.shields.io/badge/g%2B%2B-compiles-green?logo=gnu&logoColor=white)
-![Static Badge](https://img.shields.io/badge/clang-compiles-green?logo=llvm&logoColor=white)
+![Static Badge](https://img.shields.io/badge/clang%2B%2B-compiles-green?logo=llvm&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/msvc%2B%2B-untested-yellow?logo=microsoft&logoColor=white) \
 ![Static Badge](https://img.shields.io/badge/OpenMP-supported-green)
 ![Static Badge](https://img.shields.io/badge/MPI-unsupported-red) \
@@ -113,7 +113,7 @@ The energy functional in this program comprises two distinct components:
  * A naive model component, which relies on the electronic density derived from a [Hartree product](http://vergil.chemistry.gatech.edu/notes/hf-intro/node3.html) wave function. This model assumes that electrons "belonging" to different atoms behave independently, albeit contradicting the Pauli exclusion principle.
  * An exchange and correlation component, designed to rectify inaccuracies introduced by the naive model in both the potential and kinetic energy distributions of the electrons.
 
-Given the spherical symmetry of ground state eigendensities, exact solutions exist for the energy contributions of the naive model. Moreover, fictitious electronic clouds, easily constructed via successive applications of differential operators, can be unambiguously mapped from non-interacting ground state eigendensities. Exact solutions also exist for integrals resembling Coulomb's law using these fictitious integrals.
+Given the spherical symmetry of ground state eigendensities, exact solutions exist for the energy contributions of the naive model. Moreover, fictitious electronic clouds, easily constructed via successive applications of differential operators, can be unambiguously mapped from non-interacting ground state eigendensities. Exact solutions also exist for integrals resembling a Coulomb potential using these fictitious electronic clouds.
 
 Leveraging this understanding, the exchange and correlation functional is divided into four parts: two for electron-electron and electron-nuclei interactions, where the fictitious electron cloud exhibits spherical symmetry, and another two for electron-electron and electron-nuclei interactions, where the fictitious cloud has cylindrical symmetry. However, to fully parameterize the force field model due to different coefficients used for modeling the Mulliken charges, a total of eight fitting parameters are employed.
 

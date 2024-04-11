@@ -2,7 +2,7 @@ system_charge        0
 is_periodic          true true false
 periodic_box_sizes   300 300 300
 atomic_basis         ecp_collection_1
-xc_coefficients      ecp_xc_collection_1
+xc_coefficients      ecp_collection_1
 
 BEGIN MOLECULE_LIST
 BEGIN MOLECULE H2O
@@ -13,7 +13,7 @@ END MOLECULE
 BEGIN MOLECULE CO2
 O     -2.3200001670       0.0000000000       0.0000000000
 C     -1.1600000835       0.0000000000       0.0000000000
-C      0.0000000000       0.0000000000       0.0000000000
+O      0.0000000000       0.0000000000       0.0000000000
 END MOLECULE
 END MOLECULE_LIST
 

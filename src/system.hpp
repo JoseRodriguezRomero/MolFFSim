@@ -14,6 +14,7 @@
 #include <autodiff/reverse/var.hpp>
 #include <autodiff/forward/dual.hpp>
 
+#include "auxiliary_functions.hpp"
 #include "molecule.hpp"
 
 namespace MolFFSim {
@@ -22,7 +23,9 @@ class System {
 private:
     // All the molecules in the system.
     std::vector<Molecule<T>> molecules;
+    std::vector<double> monomer_energies;
     std::vector<bool> molecules_to_print;
+    std::vector<std::string> names_molecules;
     
     // All the type of molecules in the system. The keys are the user-assigned
     // ID's (in the form of strings) given in the input file.
@@ -33,12 +36,13 @@ private:
     // each element are used as hash keys.
     std::unordered_map<unsigned,std::vector<double>> elem_c_coeff;
     std::unordered_map<unsigned,std::vector<double>> elem_lambda_coeff;
+    bool is_ecp;
     
-    enum XCRules {rule1, rule2, rule3};
-    XCRules xc_rule = rule1;
+    std::unordered_map<unsigned,std::vector<double>> elem_xc_coeff;
+    MolFFSim::XCRules xc_rule = rule1;
     
     std::string xc_coeff_collection;            // Name of the collection.
-    std::string atom_basis_funcs_collection;    // Name of the collection.
+    std::string atom_basis_collection;          // Name of the collection.
     
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
@@ -54,16 +58,30 @@ public:
         return molecules_to_print;
     }
     
-    void PolarizeMolecules();
     void ReadInputFile(std::ifstream &input_file);
     
-    void molecGeomOptimization();
-    void pointEnergyCalculation();
-    void systemGeomOptimization();
+    // Use this for system-wide a geometry optimization, and point-energy
+    // calculations of the system as a whole.
+    void PolarizeMolecules();
+
+    T SystemEnergy();
+    T SystemInteractionEnergy();
+    T SystemEnergyFromGeom(const std::vector<T> angles_and);
+    
+    // Use this to optimize the isolated (monomer) geometry of the molecules.
+    void MonomerPolarizeMolecules();
+    void getMonomerEnergies();
     
     void setSystemCharge(const unsigned charge);
     void setPeriodic(const std::vector<bool> &is_periodic);
     void setPeriodicBoxSizes(const std::vector<double> box_side_len);
+    
+    void readXCCoefficients(const std::string &xc_coeff_collection);
+    void readAtomicBasisSet(const std::string &atom_basis_collection);
+    
+    void setECP();
+    void setFullE();
+    void setXCRule();
 };
 
 }

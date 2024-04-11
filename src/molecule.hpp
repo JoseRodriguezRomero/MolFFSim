@@ -13,23 +13,25 @@
 #include <autodiff/reverse/var.hpp>
 #include <autodiff/forward/dual.hpp>
 
+#include "auxiliary_functions.hpp"
 #include "xc_functionals.hpp"
 
 namespace MolFFSim {
+
+enum XCRules {rule1, rule2, rule3};
 
 template <typename T>
 class Atom {
 private:
     Eigen::Vector3<T> pos;                      // Atom data.
     unsigned atomic_number;                     // Atom data.
+    unsigned z_eff;                             // Effective atomic number.
     
     T pol_coeff;                                // Electron cloud data.
     std::vector<double> cloud_c_coeffs;         // Electron cloud data.
     std::vector<double> cloud_lambda_coeffs;    // Electron cloud data.
     
     std::vector<double> xc_coeffs;
-    
-    enum XCRules {rule1, rule2, rule3};
     XCRules xc_rule = rule1;
     
     std::vector<bool> is_periodic;
@@ -42,11 +44,15 @@ public:
     
     inline Eigen::Vector3<T> Pos() const { return pos; }
     inline T PolCoeff() const { return pol_coeff; }
+    inline unsigned EffAtomicNumber() const { return z_eff; }
     inline unsigned AtomicNumber() const { return atomic_number; }
     
     inline T ModelPartialCharge() const {
         return atomic_number*(1.0 - pol_coeff);
     }
+    
+    inline void setECP() { z_eff = ECPEffectiveAtomicNumber(atomic_number); }
+    inline void setFullE() { z_eff = atomic_number; }
     
     inline const std::vector<bool>& isPeriodic() const { return is_periodic; }
     inline void setPeriodic(const std::vector<bool>& is_periodic) {
@@ -91,6 +97,7 @@ public:
         return cloud_lambda_coeffs;
     }
     
+    void setXCRule(MolFFSim::XCRules xc_rule) { this->xc_rule = xc_rule; }
     inline const std::vector<double>& XCCoeffs() const { return xc_coeffs; }
     inline double XCCoeffA() const { return xc_coeffs[0]; }
     inline double XCCoeffB() const { return xc_coeffs[1]; }
@@ -146,10 +153,7 @@ private:
     Eigen::Quaternion<T> center_qr;     // Quaternion rotation representation.
     Eigen::Quaternion<T> center_qv;     // Rate at which the quaternion
                                         // components change in time.
-    
-    enum XCRules {rule1, rule2, rule3};
-    XCRules xc_rule = rule1;
-    
+        
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
     
@@ -171,10 +175,7 @@ public:
         return atoms_rot;
     }
     
-    inline Molecule::XCRules XCRule() const { return xc_rule; }
-    inline void setXCRule(Molecule::XCRules xc_rule) {
-        this->xc_rule = xc_rule;
-    }
+    void setXCRule(MolFFSim::XCRules xc_rule);
     
     void removeAtom(const unsigned atom_index);
     void addAtom(const MolFFSim::Atom<double> &atom);
@@ -209,12 +210,19 @@ public:
         }
     }
     
+    void createElectronClouds(
+        const std::unordered_map<unsigned,std::vector<double>> &c_coeffs,
+        const std::unordered_map<unsigned,std::vector<double>> &lambda_coeffs);
+    
     inline void setVel(const Eigen::Vector3<T> &vel) { center_v = vel; }
     inline void setRotQ(const Eigen::Quaternion<T> &qr) { center_qr = qr; }
     inline void setRotQVel(const Eigen::Quaternion<T> &qv) { center_qv = qv; }
     void applyRotationAndTranslation(); // Invoke this function once the
                                         // rotations and translations of the
                                         // molecule are set.
+    
+    void setECP();
+    void setFullE();
     
     T SelfEnergy() const;
     T InteractionEnergy(const Molecule &other) const;
