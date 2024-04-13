@@ -43,12 +43,12 @@ public:
     ~Atom();
     
     inline Eigen::Vector3<T> Pos() const { return pos; }
-    inline T PolCoeff() const { return pol_coeff; }
+    inline const T& PolCoeff() const { return pol_coeff; }
     inline unsigned EffAtomicNumber() const { return z_eff; }
     inline unsigned AtomicNumber() const { return atomic_number; }
     
-    inline T ModelPartialCharge() const {
-        return atomic_number*(1.0 - pol_coeff);
+    inline const T ModelPartialCharge() const {
+        return z_eff*(1.0 - pol_coeff);
     }
     
     inline void setECP() { z_eff = ECPEffectiveAtomicNumber(atomic_number); }
@@ -103,6 +103,10 @@ public:
     inline double XCCoeffB() const { return xc_coeffs[1]; }
     inline double XCCoeffC() const { return xc_coeffs[2]; }
     inline double XCCoeffD() const { return xc_coeffs[3]; }
+    inline double XCCoeffPolA() const { return xc_coeffs[4]; }
+    inline double XCCoeffPolB() const { return xc_coeffs[5]; }
+    inline double XCCoeffPolC() const { return xc_coeffs[6]; }
+    inline double XCCoeffPolD() const { return xc_coeffs[7]; }
     
     inline void setPos(const Eigen::Vector3<T> &pos) {
         this->pos = pos;
@@ -122,7 +126,14 @@ public:
         }
     }
     
-    inline void setPolCoeff(const T &pol_coeff) { this->pol_coeff = pol_coeff; }
+    inline void setXCCoeffs(const std::vector<double> &xc_coeffs) {
+        this->xc_coeffs = xc_coeffs;
+    }
+    
+    inline void setPolCoeff(const T &pol_coeff) {
+        this->pol_coeff = pol_coeff;
+    }
+    
     inline void setAtomicNumber(const unsigned atomic_number) {
         this->atomic_number = atomic_number;
     };
@@ -135,6 +146,13 @@ public:
     
     T SelfEnergy() const;
     T InteractionEnergy(const Atom &other) const;
+    
+    // Auxiliary functions for computing the matrix and vector in the system
+    // of linear equations that comes form the fictitious self-energy
+    // minimization of the system.
+    void PolMatSelf(T &mat_elem, T &vec_elem) const;
+    void PolMatInteraction(const Atom &other, T &mat_elem, T &vec_elem_i,
+                           T &vec_elem_j) const;
     
     void operator=(const Atom& other);
     bool operator==(const Atom& other) const;
@@ -167,11 +185,19 @@ public:
     inline Eigen::Quaternion<T> RotRotQ() const { return center_qr; }
     inline Eigen::Quaternion<T> RotRotQVel() const { return center_qv; }
     
-    inline const std::vector<Atom<double>>& Atoms() const {
+    inline const std::vector<Atom<double>>& const_Atoms() const {
         return atoms;
     }
     
-    inline const std::vector<Atom<T>>& AtomsRotAndTrans() const {
+    inline const std::vector<Atom<T>>& const_AtomsRotAndTrans() const {
+        return atoms_rot;
+    }
+    
+    inline std::vector<Atom<double>>& Atoms() {
+        return atoms;
+    }
+    
+    inline std::vector<Atom<T>>& AtomsRotAndTrans() {
         return atoms_rot;
     }
     
@@ -214,6 +240,9 @@ public:
         const std::unordered_map<unsigned,std::vector<double>> &c_coeffs,
         const std::unordered_map<unsigned,std::vector<double>> &lambda_coeffs);
     
+    void setXCCoefficients(
+        const std::unordered_map<unsigned,std::vector<double>> &xc_coeffs);
+    
     inline void setVel(const Eigen::Vector3<T> &vel) { center_v = vel; }
     inline void setRotQ(const Eigen::Quaternion<T> &qr) { center_qr = qr; }
     inline void setRotQVel(const Eigen::Quaternion<T> &qv) { center_qv = qv; }
@@ -228,6 +257,11 @@ public:
     T InteractionEnergy(const Molecule &other) const;
     
     void setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z);
+    
+    // Computes the polarization coefficients of each atom as if the moelcule
+    // were perfectly isolated. This is meant for the isolated monomer energy
+    // calculations.
+    void Polarize();
     
     void operator=(const Molecule& other);
     bool operator==(const Molecule& other) const;

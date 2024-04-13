@@ -46,6 +46,18 @@ System<T>::~System() {
 
 template<typename T>
 void System<T>::ReadInputFile(std::ifstream &input_file) {
+    molecules.clear();
+    monomer_energies.clear();
+    molecules_to_print.clear();
+    names_molecules.clear();
+    molecule_instances.clear();
+    atoms_molecules.clear();
+    molecule_list.clear();
+    elem_c_coeff.clear();
+    elem_lambda_coeff.clear();
+    elem_xc_coeff.clear();
+    system_sum_charges = 0;
+    
     std::string line;
     while (std::getline(input_file, line)) {
         if (line.find("system_charge") != std::string::npos) {
@@ -271,6 +283,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     }
                     
                     molecules.push_back(molecule_list[molec_label]);
+                    names_molecules.push_back(molec_label);
                     molecules.back().setAnglesXYZ(thx,thy,thz);
                     molecules.back().setPos({dx,dy,dz});
                     
@@ -316,6 +329,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     }
                     
                     molecules.push_back(molecule_list[molec_label]);
+                    names_molecules.push_back(molec_label);
                     molecules.back().setRotQ({qw,qx,qy,qz});
                     molecules.back().setPos({dx,dy,dz});
                     
@@ -341,6 +355,24 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
     }
     
     setXCRule();
+    
+    for (auto it1 = molecules.begin(); it1 != molecules.end(); it1++) {
+        auto it2_end = it1->AtomsRotAndTrans().end();
+        auto it2_begin = it1->AtomsRotAndTrans().begin();
+        for (auto it2 = it2_begin; it2 != it2_end; it2++) {
+            atoms_molecules.push_back(&(*it2));
+        }
+    }
+    
+    getMonomerEnergies();
+    for (std::string molec_name : names_molecules) {
+        if (molecule_instances.find(molec_name) == molecule_instances.end()) {
+            molecule_instances[molec_name] = 1;
+        }
+        else {
+            molecule_instances[molec_name]++;
+        }
+    }
 }
 
 template<typename T>
@@ -386,7 +418,7 @@ void System<T>::readXCCoefficients(const std::string &xc_coeff_collection) {
         char elem_label[8];
         double xc_coeffs[8];
         int num_args = sscanf(line.c_str(),"%s %lf %lf %lf %lf %lf %lf %lf %lf",
-                              elem_label, xc_coeffs, xc_coeffs + 1,
+                              elem_label, xc_coeffs + 0, xc_coeffs + 1,
                               xc_coeffs + 2, xc_coeffs + 3, xc_coeffs + 4,
                               xc_coeffs + 5, xc_coeffs + 6, xc_coeffs + 7);
         
@@ -501,10 +533,12 @@ void System<T>::readAtomicBasisSet(const std::string &atom_basis_collection) {
     
     for (auto it1 = molecules.begin(); it1 != molecules.end(); it1++) {
         it1->createElectronClouds(elem_c_coeff,elem_lambda_coeff);
+        it1->setXCCoefficients(elem_xc_coeff);
     }
     
     for (auto it1 = molecule_list.begin(); it1 != molecule_list.end(); it1++) {
         it1->second.createElectronClouds(elem_c_coeff,elem_lambda_coeff);
+        it1->second.setXCCoefficients(elem_xc_coeff);
     }
 }
 
@@ -518,7 +552,7 @@ void System<T>::setSystemCharge(const unsigned charge) {
         auto it2_end = it1->Atoms().end();
         auto it2_begin = it1->Atoms().begin();
         for (auto it2 = it2_begin; it2 != it2_end; it2++) {
-            system_sum_charges -= it2->AtomicNumber();
+            system_sum_charges -= it2->EffAtomicNumber();
         }
     }
 }
@@ -543,29 +577,131 @@ void System<T>::setPeriodicBoxSizes(const std::vector<double> box_side_len) {
 
 template<typename T>
 void System<T>::PolarizeMolecules() {
+    unsigned n_atoms = atoms_molecules.size();
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
+    Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
+        
+    for (unsigned i = 0; i < n_atoms; i++) {
+        const Atom<T> *atom_i = atoms_molecules[i];
+        for (unsigned j = i + 1; j < n_atoms; j++) {
+            const Atom<T> *atom_j = atoms_molecules[j];
+            T mat_elem(0.0);
+            T vec_elem_i(0.0);
+            T vec_elem_j(0.0);
+            atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i,
+                                      vec_elem_j);
+            
+            pol_mat(i,j) = mat_elem;
+            pol_mat(j,i) = mat_elem;
+            vec_mat(i) += vec_elem_i;
+            vec_mat(j) += vec_elem_j;
+        }
+    }
     
+    for (unsigned i = 0; i < n_atoms; i++) {
+        const Atom<T> *atom_i = atoms_molecules[i];
+        
+        T mat_elem(0.0);
+        T vec_elem(0.0);
+        atom_i->PolMatSelf(mat_elem, vec_elem);
+        
+        pol_mat(i,i) = mat_elem;
+        vec_mat(i) += vec_elem;
+        
+        pol_mat(i,n_atoms) = atom_i->EffAtomicNumber();
+        pol_mat(n_atoms,i) = atom_i->EffAtomicNumber();
+        vec_mat(n_atoms) += atom_i->EffAtomicNumber();
+    }
+    
+    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    // pol_coeffs = pol_mat.lu().solve(vec_mat);
+    
+//    for (unsigned i = 0; i < n_atoms + 1; i++) {
+//        for (unsigned j = 0; j < n_atoms + 1; j++) {
+//            if (pol_mat(i,j) >= 0) {
+//                char buffer[256];
+//                snprintf(buffer,256," %8.3E  ",double(pol_mat(i,j)));
+//                std::cout << buffer;
+//            }
+//            else {
+//                char buffer[256];
+//                snprintf(buffer,256,"%8.3E  ",double(pol_mat(i,j)));
+//                std::cout << buffer;
+//            }
+//        }
+//        char buffer[256];
+//        if (vec_mat(i) >= 0) {
+//            snprintf(buffer, 256, " %8.3E  ", double(vec_mat(i)));
+//        }
+//        else {
+//            snprintf(buffer, 256, "%8.3E  ", double(vec_mat(i)));
+//        }
+//
+//        std::cout << "|  " << buffer;
+//        
+//        if (pol_coeffs(i) >= 0) {
+//            snprintf(buffer, 256, " %8.3E  ", double(pol_coeffs(i)));
+//        }
+//        else {
+//            snprintf(buffer, 256, "%8.3E  ", double(pol_coeffs(i)));
+//        }
+//        
+//        std::cout << buffer << std::endl;
+//    }
+//    
+//    std::cout << std::endl;
+    
+    double aux_sum = 0;
+    for (unsigned i = 0; i < n_atoms; i++) {
+        atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
+    }
 }
 
 template<typename T>
 T System<T>::SystemEnergy() {
     PolarizeMolecules();
     
-    return T(0);
+    T energy = T(0.0);
+    for (auto it1 = molecules.cbegin(); it1 != molecules.cend(); it1++) {
+        for (auto it2 = it1 + 1; it2 != molecules.cend(); it2++) {
+            energy += it1->InteractionEnergy(*it2);
+        }
+    }
+    
+    for (auto it1 = molecules.cbegin(); it1 != molecules.cend(); it1++) {
+        energy += it1->SelfEnergy();
+    }
+    
+    return energy;
 }
 
 template<typename T>
 T System<T>::SystemInteractionEnergy() {
-    return T(0);
+    T energy = SystemEnergy();
+    
+    for (std::string molec_name : names_molecules) {
+        energy -= monomer_energies[molec_name];
+    }
+    
+    return energy;
 }
 
 template<typename T>
 void System<T>::MonomerPolarizeMolecules() {
-    
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        it->second.Polarize();
+    }
 }
 
 template<typename T>
 void System<T>::getMonomerEnergies() {
+    MonomerPolarizeMolecules();
+    monomer_energies.clear();
     
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        monomer_energies[it->first] = double(it->second.SelfEnergy());
+    }
 }
 
 template <typename T>
@@ -577,6 +713,36 @@ void System<T>::setECP() {
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
         it->second.setECP();
     }
+}
+
+template <typename T>
+const std::vector<std::string> System<T>::ListMoleculeTypes() const {
+    std::vector<std::string> molec_names;
+    molec_names.reserve(molecule_list.size());
+    
+    for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
+        molec_names.push_back(it->first);
+    }
+    
+    return molec_names;
+}
+
+template <typename T>
+const unsigned System<T>::MoleculeInstances(const std::string &molec_name) const {
+    if (molecule_instances.find(molec_name) == molecule_instances.end()) {
+        return 0;
+    }
+    
+    return molecule_instances.find(molec_name)->second;
+}
+
+template <typename T>
+const double System<T>::MoleculeMonomerEnergy(const std::string &molec_name) const {
+    if (monomer_energies.find(molec_name) == monomer_energies.end()) {
+        return 0;
+    }
+    
+    return monomer_energies.find(molec_name)->second;
 }
 
 template <typename T>
@@ -603,6 +769,7 @@ void System<T>::setXCRule() {
 
 template <typename T>
 std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
+    os << "System Information" << std::endl;
     char buffer[MAX_PRINT_BUFFER_SIZE];
     for (int i = 0; i < 112; i++) {
         os << "-";
@@ -631,6 +798,39 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
         }
         os << std::endl;
     }
+    
+    os << std::endl;
+    os << std::endl;
+    
+    os << "Molecule/Fragment Information" << std::endl;
+    
+    for (int i = 0; i < 87; i++) {
+        os << "-";
+    }
+    os << std::endl;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%25s %25s %35s", "Name/Label",
+             "Instances", "Total Energy [kJ/mol]");
+    os << buffer << std::endl;
+    
+    for (int i = 0; i < 87; i++) {
+        os << "-";
+    }
+    os << std::endl;
+    
+    for (std::string molec_name : system.ListMoleculeTypes()) {
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%25s %25u %35.5E", 
+                 molec_name.c_str(), system.MoleculeInstances(molec_name),
+                 system.MoleculeMonomerEnergy(molec_name));
+        os << buffer << std::endl;
+    }
+    
+    for (int i = 0; i < 87; i++) {
+        os << "-";
+    }
+    
+    os << std::endl;
+    os << std::endl;
     
     return os;
 }

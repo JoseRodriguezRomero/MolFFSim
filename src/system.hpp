@@ -23,13 +23,18 @@ class System {
 private:
     // All the molecules in the system.
     std::vector<Molecule<T>> molecules;
-    std::vector<double> monomer_energies;
     std::vector<bool> molecules_to_print;
     std::vector<std::string> names_molecules;
+    
+    // This is are auxiliary vectors, and should never be return in any of the
+    // interfaces of this class.
+    std::vector<Atom<T>*> atoms_molecules;
     
     // All the type of molecules in the system. The keys are the user-assigned
     // ID's (in the form of strings) given in the input file.
     std::unordered_map<std::string,MolFFSim::Molecule<T>> molecule_list;
+    std::unordered_map<std::string,unsigned> molecule_instances;
+    std::unordered_map<std::string,double> monomer_energies;
     
     // Basis-function parametrization for the non-interacting ground states
     // eigendensities of all the elements of interest. The atomic number of
@@ -67,6 +72,10 @@ public:
     T SystemEnergy();
     T SystemInteractionEnergy();
     T SystemEnergyFromGeom(const std::vector<T> angles_and);
+    
+    const std::vector<std::string> ListMoleculeTypes() const;
+    const unsigned MoleculeInstances(const std::string &molec_name) const;
+    const double MoleculeMonomerEnergy(const std::string &molec_name) const;
     
     // Use this to optimize the isolated (monomer) geometry of the molecules.
     void MonomerPolarizeMolecules();

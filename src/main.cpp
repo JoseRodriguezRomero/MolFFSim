@@ -64,14 +64,15 @@ int main(int argc, char** argv) {
         system.ReadInputFile(input_file);
         input_file.close();
         
+        system.PolarizeMolecules();
         std::cout << system << std::endl;;
-        
-        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-                 "Total Energy:",0.0);
+                
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                 "Total Energy:", system.SystemEnergy());
         std::cout << buffer << std::endl;
         
-        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-                 "Interaction Energy:",0.0);
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                 "Interaction Energy:", system.SystemInteractionEnergy());
         std::cout << buffer << std::endl << std::endl;
     }
     else if (diff_is_forward) {
@@ -82,12 +83,13 @@ int main(int argc, char** argv) {
         if (system_geom_optim) {
             std::cout << system << std::endl;;
             
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-                     "Total Energy:",0.0);
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                     "Total Energy:", double(system.SystemEnergy()));
             std::cout << buffer << std::endl;
             
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-                     "Interaction Energy:",0.0);
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                     "Interaction Energy:", 
+                     double(system.SystemInteractionEnergy()));
             std::cout << buffer << std::endl << std::endl;
         }
         else if (molec_geom_optim) {
@@ -101,11 +103,11 @@ int main(int argc, char** argv) {
         if (system_geom_optim) {
             std::cout << system << std::endl;;
             
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
-                     "Total Energy:",double(system.SystemEnergy()));
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                     "Total Energy:", double(system.SystemEnergy()));
             std::cout << buffer << std::endl;
             
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %-15.5E [kJ/mol]",
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
                      "Interaction Energy:",
                      double(system.SystemInteractionEnergy()));
             std::cout << buffer << std::endl << std::endl;

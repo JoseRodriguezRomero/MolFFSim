@@ -4,14 +4,14 @@
 #define DEFAULT_POL_COEFF           T(1.0)
 #define DEFAULT_ATOMIC_NUMBER       1
 
-#define DEFAULT_XC_A_COEFF          0.5
-#define DEFAULT_XC_B_COEFF          0.5
-#define DEFAULT_XC_C_COEFF          0.5
-#define DEFAULT_XC_D_COEFF          0.5
-#define DEFAULT_XC_A_POL_COEFF      0.5
-#define DEFAULT_XC_B_POL_COEFF      0.5
-#define DEFAULT_XC_C_POL_COEFF      0.5
-#define DEFAULT_XC_D_POL_COEFF      0.5
+#define DEFAULT_XC_A_COEFF          0.0
+#define DEFAULT_XC_B_COEFF          0.0
+#define DEFAULT_XC_C_COEFF          0.0
+#define DEFAULT_XC_D_COEFF          0.0
+#define DEFAULT_XC_A_POL_COEFF      0.0
+#define DEFAULT_XC_B_POL_COEFF      0.0
+#define DEFAULT_XC_C_POL_COEFF      0.0
+#define DEFAULT_XC_D_POL_COEFF      0.0
 
 #define DEFAULT_IS_PERIODIC         {false, false, false}
 #define DEFAULT_PERIODIC_SIZES      {50, 50, 50}
@@ -39,21 +39,21 @@
 
 void XCCombRule1(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
-    for (unsigned i = 0; i < 4; i++) {
+    for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = (xc_a[i] + xc_b[i]) / 2.0;
     }
 }
 
 void XCCombRule2(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
-    for (unsigned i = 0; i < 4; i++) {
+    for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = sqrt(xc_a[i] * xc_b[i]);
     }
 }
 
 void XCCombRule3(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
                  const std::vector<double> &xc_b) {
-    for (unsigned i = 0; i < 4; i++) {
+    for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = (xc_a[i] * xc_b[i]) / (xc_a[i] + xc_b[i]);
     }
 }
@@ -69,11 +69,15 @@ Atom<T>::Atom() {
     
     pol_coeff = DEFAULT_POL_COEFF;
     
-    xc_coeffs.reserve(4);
-    xc_coeffs[0] = DEFAULT_XC_A_COEFF;
-    xc_coeffs[1] = DEFAULT_XC_B_COEFF;
-    xc_coeffs[2] = DEFAULT_XC_C_COEFF;
-    xc_coeffs[3] = DEFAULT_XC_D_COEFF;
+    xc_coeffs.reserve(8);
+    xc_coeffs.push_back(DEFAULT_XC_A_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_B_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_C_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_D_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_A_POL_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_B_POL_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_C_POL_COEFF);
+    xc_coeffs.push_back(DEFAULT_XC_D_POL_COEFF);
     
     is_periodic = DEFAULT_IS_PERIODIC;
     box_side_len = DEFAULT_PERIODIC_SIZES;
@@ -87,12 +91,7 @@ Atom<T>::Atom(const Atom &other) {
     pol_coeff = other.PolCoeff();
     cloud_c_coeffs = other.CloudCCoeffs();
     cloud_lambda_coeffs = other.CloudLambdaCoeffs();
-    
-    xc_coeffs.reserve(4);
-    xc_coeffs[0] = XCCoeffA();
-    xc_coeffs[1] = XCCoeffB();
-    xc_coeffs[2] = XCCoeffC();
-    xc_coeffs[3] = XCCoeffD();
+    xc_coeffs = other.XCCoeffs();
     
     is_periodic = other.isPeriodic();
     box_side_len = other.PeriodicBoxSizes();
@@ -137,9 +136,7 @@ void Atom<T>::addClouds(const std::vector<double> &c_coeffs,
 template<typename T>
 T Atom<T>::SelfEnergy() const {
     T energy = 0;
-    
-    std::vector<double> comb_xc_coeffs;
-    comb_xc_coeffs.reserve(4);
+    std::vector<double> comb_xc_coeffs = xc_coeffs;
     
     switch (xc_rule) {
         case rule1:
@@ -155,8 +152,12 @@ T Atom<T>::SelfEnergy() const {
     
     // Cloud - Nuclei
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
-        double c_coeff = atomic_number*cloud_c_coeffs[i];
+        T c_coeff = z_eff*cloud_c_coeffs[i];
         double lambda_coeff = cloud_lambda_coeffs[i];
+        
+        if (i >= cloud_c_coeffs.size() - 3) {
+            c_coeff *= pol_coeff;
+        }
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,0);
         energy += c_coeff*comb_xc_coeffs[1]*XCSpheSymm<T>(lambda_coeff,0);
@@ -165,7 +166,16 @@ T Atom<T>::SelfEnergy() const {
     // Cloud - Cloud
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
         for (unsigned j = i + 1; j < cloud_c_coeffs.size(); j++) {
-            double c_coeff = cloud_c_coeffs[i] * cloud_c_coeffs[j];
+            T c_coeff = cloud_c_coeffs[i] * cloud_c_coeffs[j];
+            
+            if (i >= cloud_c_coeffs.size() - 3) {
+                c_coeff *= pol_coeff;
+            }
+            
+            if (j >= cloud_c_coeffs.size() - 3) {
+                c_coeff *= pol_coeff;
+            }
+            
             double lambda_coeff =
                 (cloud_lambda_coeffs[i] * cloud_lambda_coeffs[j]) /
                 (cloud_lambda_coeffs[i] + cloud_lambda_coeffs[j]);
@@ -181,9 +191,7 @@ T Atom<T>::SelfEnergy() const {
 template<typename T>
 T Atom<T>::InteractionEnergy(const Atom &other) const {
     T energy = 0;
-    
-    std::vector<double> comb_xc_coeffs;
-    comb_xc_coeffs.reserve(4);
+    std::vector<double> comb_xc_coeffs = xc_coeffs;
     
     switch (xc_rule) {
         case rule1:
@@ -204,8 +212,12 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
     
     // Cloud - Nuclei
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
-        double c_coeff = other.EffAtomicNumber() * cloud_c_coeffs[i];
+        T c_coeff = other.EffAtomicNumber() * cloud_c_coeffs[i];
         double lambda_coeff = cloud_lambda_coeffs[i];
+        
+        if (i >= cloud_c_coeffs.size() - 3) {
+            c_coeff *= pol_coeff;
+        }
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
         energy +=
@@ -216,8 +228,12 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
     
     // Nuclei - Cloud
     for (unsigned i = 0; i < other.CloudCCoeffs().size(); i++) {
-        double c_coeff = z_eff * other.CloudCCoeffs()[i];
+        T c_coeff = z_eff * other.CloudCCoeffs()[i];
         double lambda_coeff = other.CloudLambdaCoeffs()[i];
+        
+        if (i >= other.CloudCCoeffs().size() - 3) {
+            c_coeff *= other.PolCoeff();
+        }
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
         energy +=
@@ -229,10 +245,18 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
     // Cloud - Cloud
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
         for (unsigned j = 0; j < other.CloudCCoeffs().size(); j++) {
-            double c_coeff = cloud_c_coeffs[i] * other.CloudCCoeffs()[j];
+            T c_coeff = cloud_c_coeffs[i] * other.CloudCCoeffs()[j];
             double lambda_coeff =
                 (cloud_lambda_coeffs[i] * other.CloudLambdaCoeffs()[j]) /
                 (cloud_lambda_coeffs[i] + other.CloudLambdaCoeffs()[j]);
+            
+            if (i >= cloud_c_coeffs.size() - 3) {
+                c_coeff *= pol_coeff;
+            }
+            
+            if (j >= other.CloudCCoeffs().size() - 3) {
+                c_coeff *= other.PolCoeff();
+            }
             
             energy += c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
             energy += c_coeff*comb_xc_coeffs[0]*
@@ -246,6 +270,145 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
 }
 
 template<typename T>
+void Atom<T>::PolMatSelf(T &mat_elem, T &vec_elem) const {
+    std::vector<double> comb_xc_coeffs = xc_coeffs;
+    
+    switch (xc_rule) {
+        case rule1:
+            XCCombRule1(comb_xc_coeffs,xc_coeffs,xc_coeffs);
+            break;
+        case rule2:
+            XCCombRule2(comb_xc_coeffs,xc_coeffs,xc_coeffs);
+            break;
+        default:
+            XCCombRule3(comb_xc_coeffs,xc_coeffs,xc_coeffs);
+            break;
+    }
+    
+    // Cloud - Nuclei
+    for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
+        T c_coeff = z_eff*cloud_c_coeffs[i];
+        double lambda_coeff = cloud_lambda_coeffs[i];
+        
+        if (i >= cloud_c_coeffs.size() - 3) {
+            vec_elem += c_coeff*NaiveModelE<T>(lambda_coeff,0);
+            vec_elem -= c_coeff*comb_xc_coeffs[0]*
+                XCSpheSymm<T>(lambda_coeff,0);
+        }
+    }
+    
+    // Cloud - Cloud
+    for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
+        for (unsigned j = i + 1; j < cloud_c_coeffs.size(); j++) {
+            T c_coeff = cloud_c_coeffs[i] * cloud_c_coeffs[j];
+            
+            double lambda_coeff =
+                (cloud_lambda_coeffs[i] * cloud_lambda_coeffs[j]) /
+                (cloud_lambda_coeffs[i] + cloud_lambda_coeffs[j]);
+            
+            bool cond1 = (i >= cloud_c_coeffs.size() - 3);
+            bool cond2 = (j >= cloud_c_coeffs.size() - 3);
+            
+            if (cond1 && cond2) {
+                mat_elem += 2.0*c_coeff*NaiveModelE<T>(lambda_coeff,0);
+                mat_elem += 2.0*c_coeff*comb_xc_coeffs[1]*
+                    XCSpheSymm<T>(lambda_coeff,0);
+            }
+            else if (cond1 || cond2) {
+                vec_elem -= c_coeff*NaiveModelE<T>(lambda_coeff,0);
+                vec_elem -= c_coeff*comb_xc_coeffs[1]*
+                    XCSpheSymm<T>(lambda_coeff,0);
+            }
+        }
+    }
+}
+
+template<typename T>
+void Atom<T>::PolMatInteraction(const Atom &other, T &mat_elem, 
+                                T &vec_elem_i, T &vec_elem_j) const {
+    
+    std::vector<double> comb_xc_coeffs;
+    comb_xc_coeffs.reserve(8);
+    
+    switch (xc_rule) {
+        case rule1:
+            XCCombRule1(comb_xc_coeffs,xc_coeffs,other.XCCoeffs());
+            break;
+        case rule2:
+            XCCombRule2(comb_xc_coeffs,xc_coeffs,other.XCCoeffs());
+            break;
+        default:
+            XCCombRule3(comb_xc_coeffs,xc_coeffs,other.XCCoeffs());
+            break;
+    }
+    
+    T atoms_dist = Distance(other);
+    
+    // Cloud - Nuclei
+    for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
+        T c_coeff = other.EffAtomicNumber() * cloud_c_coeffs[i];
+        double lambda_coeff = cloud_lambda_coeffs[i];
+        
+        if (i >= cloud_c_coeffs.size() - 3) {
+            vec_elem_i += c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
+            vec_elem_i -= c_coeff*comb_xc_coeffs[0]*
+                XCSpheSymm<T>(lambda_coeff,atoms_dist);
+            vec_elem_i -= c_coeff*comb_xc_coeffs[2]*
+                XCCylinSymm<T>(lambda_coeff,atoms_dist);
+        }
+    }
+    
+    // Nuclei - Cloud
+    for (unsigned i = 0; i < other.CloudCCoeffs().size(); i++) {
+        T c_coeff = z_eff * other.CloudCCoeffs()[i];
+        double lambda_coeff = other.CloudLambdaCoeffs()[i];
+        
+        if (i >= other.CloudCCoeffs().size() - 3) {
+            vec_elem_j += c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
+            vec_elem_j -= c_coeff*comb_xc_coeffs[0]*
+                XCSpheSymm<T>(lambda_coeff,atoms_dist);
+            vec_elem_j -= c_coeff*comb_xc_coeffs[2]*
+                XCCylinSymm<T>(lambda_coeff,atoms_dist);
+        }
+    }
+    
+    // Cloud - Cloud
+    for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
+        for (unsigned j = 0; j < other.CloudCCoeffs().size(); j++) {
+            T c_coeff = cloud_c_coeffs[i] * other.CloudCCoeffs()[j];
+            double lambda_coeff =
+                (cloud_lambda_coeffs[i] * other.CloudLambdaCoeffs()[j]) /
+                (cloud_lambda_coeffs[i] + other.CloudLambdaCoeffs()[j]);
+            
+            bool cond1 = (i >= cloud_c_coeffs.size() - 3);
+            bool cond2 = (j >= other.CloudCCoeffs().size() - 3);
+            
+            if (cond1 && cond2) {
+                mat_elem += c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
+                mat_elem += c_coeff*comb_xc_coeffs[1]*
+                    XCSpheSymm<T>(lambda_coeff,atoms_dist);
+                mat_elem += c_coeff*comb_xc_coeffs[3]*
+                    XCCylinSymm<T>(lambda_coeff,atoms_dist);
+            }
+            else if (cond1) {
+                vec_elem_i -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
+                vec_elem_i -= c_coeff*comb_xc_coeffs[1]*
+                    XCSpheSymm<T>(lambda_coeff,atoms_dist);
+                vec_elem_i -= c_coeff*comb_xc_coeffs[3]*
+                    XCCylinSymm<T>(lambda_coeff,atoms_dist);
+            }
+            else if (cond2) {
+                vec_elem_j -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
+                vec_elem_j -= c_coeff*comb_xc_coeffs[1]*
+                    XCSpheSymm<T>(lambda_coeff,atoms_dist);
+                vec_elem_j -= c_coeff*comb_xc_coeffs[3]*
+                    XCCylinSymm<T>(lambda_coeff,atoms_dist);
+            }
+        }
+    }
+}
+
+template<typename T>
 void Atom<T>::operator=(const Atom& other) {
     pos = other.Pos();
     atomic_number = other.AtomicNumber();
@@ -253,11 +416,7 @@ void Atom<T>::operator=(const Atom& other) {
     pol_coeff = other.PolCoeff();
     cloud_c_coeffs = other.CloudCCoeffs();
     cloud_lambda_coeffs = other.CloudLambdaCoeffs();
-    
-    xc_coeffs[0] = other.XCCoeffs()[0];
-    xc_coeffs[1] = other.XCCoeffs()[1];
-    xc_coeffs[2] = other.XCCoeffs()[2];
-    xc_coeffs[3] = other.XCCoeffs()[3];
+    xc_coeffs = other.XCCoeffs();
 }
 
 template<typename T>
@@ -331,8 +490,8 @@ Molecule<T>::Molecule(const Molecule& other) {
     center_qr = other.RotRotQ();
     center_qv = other.RotRotQVel();
     
-    atoms = other.Atoms();
-    atoms_rot = other.AtomsRotAndTrans();
+    atoms = other.const_Atoms();
+    atoms_rot = other.const_AtomsRotAndTrans();
     
     is_periodic = other.isPeriodic();
     box_side_len = other.PeriodicBoxSizes();
@@ -447,6 +606,18 @@ void Molecule<T>::createElectronClouds(
 }
 
 template<typename T>
+void Molecule<T>::setXCCoefficients(
+    const std::unordered_map<unsigned,std::vector<double>> &xc_coeffs) {
+    for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
+        it->setXCCoeffs(xc_coeffs.find(it->AtomicNumber())->second);
+    }
+    
+    for (auto it = atoms.begin(); it != atoms.end(); it++) {
+        it->setXCCoeffs(xc_coeffs.find(it->AtomicNumber())->second);
+    }
+}
+
+template<typename T>
 void Molecule<T>::setECP() {
     for (auto it = atoms_rot.begin(); it != atoms_rot.end(); it++) {
         it->setECP();
@@ -486,8 +657,8 @@ template<typename T>
 T Molecule<T>::InteractionEnergy(const Molecule &other) const {
     T energy = T(0);
     for (auto it1 = atoms_rot.begin(); it1 != atoms_rot.end(); it1++) {
-        auto aux_it_end = other.AtomsRotAndTrans().end();
-        auto aux_it_begin = other.AtomsRotAndTrans().begin();
+        auto aux_it_end = other.const_AtomsRotAndTrans().cend();
+        auto aux_it_begin = other.const_AtomsRotAndTrans().cbegin();
         for (auto it2 = aux_it_begin; it2 != aux_it_end; it2++) {
             energy += it1->InteractionEnergy(*it2);
         }
@@ -514,9 +685,14 @@ void Molecule<T>::setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z) {
 }
 
 template<typename T>
+void Molecule<T>::Polarize() {
+    
+}
+
+template<typename T>
 void Molecule<T>::operator=(const Molecule& other) {
-    atoms = other.Atoms();
-    atoms_rot = other.AtomsRotAndTrans();
+    atoms = other.const_Atoms();
+    atoms_rot = other.const_AtomsRotAndTrans();
     
     center_r = other.Pos();
     center_v = other.Vel();
@@ -559,8 +735,8 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
 //    os << std::endl;
     
     // Print the data.
-    auto it_end = molec.AtomsRotAndTrans().end();
-    auto it_begin = molec.AtomsRotAndTrans().begin();
+    auto it_end = molec.const_AtomsRotAndTrans().cend();
+    auto it_begin = molec.const_AtomsRotAndTrans().cbegin();
     for (auto it = it_begin; it != it_end; it++) {
         snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
                  "%8s %25.8lf %25.8lf %25.8lf %25.8lf",

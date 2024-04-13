@@ -1,5 +1,5 @@
 #define M_PI_SQRT                   1.7724538509055159
-#define MIN_ATOM_POTENTIAL_DIST     1.0E-8
+#define MIN_ATOM_POTENTIAL_DIST     1.0E-6
 
 #define POW_TABLE_SIZE              21
 
@@ -231,17 +231,17 @@ T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
     std::vector<T> dist_pows;
     std::vector<double> lambda_pows;
     
-    dist_pows.reserve(21);
-    lambda_pows.reserve(21);
+    dist_pows.reserve(POW_TABLE_SIZE);
+    lambda_pows.reserve(POW_TABLE_SIZE);
     
     if (dist == 0) {
-        for (unsigned i = 0; i < 21; i++) {
+        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
             dist_pows[i] = 0;
             lambda_pows[i] = pow(lambda,i);
         }
     }
     else {
-        for (unsigned i = 0; i < 21; i++) {
+        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
             dist_pows[i] = pow(dist,i);
             lambda_pows[i] = pow(lambda,i);
         }
@@ -285,7 +285,7 @@ T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
         }
     }
     
-    T aux_c = sqrt(lambda) * exp(-lambda*pow(dist,2)) / M_PI_SQRT;
+    T aux_c = sqrt(lambda) * exp(-lambda*pow(dist,2)) /  M_PI_SQRT;
     
     T xc_energy = 0;
     xc_energy += XCEnergyD1(lambda_pows, dist_pows) / FACTORIAL_3;
