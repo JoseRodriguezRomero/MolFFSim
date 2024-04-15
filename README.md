@@ -4,8 +4,9 @@
 ![Static Badge](https://img.shields.io/badge/g%2B%2B-compiles-green?logo=gnu&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/clang%2B%2B-compiles-green?logo=llvm&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/msvc%2B%2B-untested-yellow?logo=microsoft&logoColor=white) \
-![Static Badge](https://img.shields.io/badge/OpenMP-supported-green)
-![Static Badge](https://img.shields.io/badge/MPI-unsupported-red) \
+![Static Badge](https://img.shields.io/badge/OpenMP-unsupported-red)
+![Static Badge](https://img.shields.io/badge/MPI-unsupported-red)
+![Static Badge](https://img.shields.io/badge/std::thread-supported-green) \
 ![Static Badge](https://img.shields.io/badge/license-GPL--3.0-blue)
 ![Static Badge](https://img.shields.io/badge/DOI-10.26434%2Fchemrxiv--2024--t5tfh--v2-blue?link=https%3A%2F%2Fchemrxiv.org%2Fengage%2Fchemrxiv%2Farticle-details%2F66033bf59138d23161602c69)
 # MolFFSim
@@ -13,7 +14,7 @@ MolFFSim is an open-source program coded in C++ specifically designed for perfor
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)
   * [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
 
-Parallelization support is exclusively achieved through OpenMP. Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Both forward and reverse modes are fully supported, without the need of recompiling the source code. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen).
+Parallelization is exclusively achieved through `std::thread`. Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Both forward and reverse modes are fully supported, without the need of recompiling the source code. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen).
 
 ## Compiling and installing
 In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that CMake is installed, along with the C++ libraries [autodiff](https://autodiff.github.io/) and [Eigen](https://gitlab.com/libeigen/eigen). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.

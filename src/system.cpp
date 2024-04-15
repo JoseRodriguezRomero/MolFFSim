@@ -580,10 +580,82 @@ void System<T>::PolarizeMolecules() {
     unsigned n_atoms = atoms_molecules.size();
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
     Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
+    
+    unsigned n_threads = std::thread::hardware_concurrency();
+    std::thread *calc_threads[n_threads - 1];
+    
+    std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> aux_vec_mat;
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        aux_vec_mat.push_back(vec_mat);
+    }
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]  =
+            new std::thread(std::bind(&System<T>::matThreadPol, *this,
+                                      &pol_mat, &(aux_vec_mat[i]), i,
+                                      n_threads));
+    }
+    
+    matThreadPol(&pol_mat, &vec_mat, n_threads - 1, n_threads);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]->join();
+        delete calc_threads[i];
+    }
         
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        vec_mat += aux_vec_mat[i];
+    }
+    
+    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    // pol_coeffs = pol_mat.lu().solve(vec_mat);
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
+    }
+}
+
+template<typename T>
+void System<T>::matThreadPol(void *pol_mat_vptr, void *vec_mat_vptr,
+                             const unsigned thread_id,
+                             const unsigned num_threads) {
+    
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *pol_mat =
+    static_cast<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>*>(pol_mat_vptr);
+    
+    Eigen::Matrix<T,Eigen::Dynamic,1> *vec_mat =
+    static_cast<Eigen::Matrix<T,Eigen::Dynamic,1>*>(vec_mat_vptr);
+    
+    unsigned n_atoms = atoms_molecules.size();
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        unsigned proc_id = i % num_threads;
+        if (thread_id != proc_id) {
+            continue;
+        }
+        
+        T mat_elem(0.0);
+        T vec_elem(0.0);
+        const Atom<T> *atom_i = atoms_molecules[i];
+        atom_i->PolMatSelf(mat_elem, vec_elem);
+        
+        (*pol_mat)(i,i) = mat_elem;
+        (*vec_mat)(i) += vec_elem;
+        
+        (*pol_mat)(i,n_atoms) = ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*pol_mat)(n_atoms,i) = ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*vec_mat)(n_atoms) += ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+    }
+    
     for (unsigned i = 0; i < n_atoms; i++) {
         const Atom<T> *atom_i = atoms_molecules[i];
         for (unsigned j = i + 1; j < n_atoms; j++) {
+            unsigned proc_id = (i*n_atoms + j) % num_threads;
+            if (thread_id != proc_id) {
+                continue;
+            }
+            
             const Atom<T> *atom_j = atoms_molecules[j];
             T mat_elem(0.0);
             T vec_elem_i(0.0);
@@ -591,70 +663,11 @@ void System<T>::PolarizeMolecules() {
             atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i,
                                       vec_elem_j);
             
-            pol_mat(i,j) = mat_elem;
-            pol_mat(j,i) = mat_elem;
-            vec_mat(i) += vec_elem_i;
-            vec_mat(j) += vec_elem_j;
+            (*vec_mat)(i) += vec_elem_i;
+            (*vec_mat)(j) += vec_elem_j;
+            (*pol_mat)(i,j) = mat_elem;
+            (*pol_mat)(j,i) = mat_elem;
         }
-    }
-    
-    for (unsigned i = 0; i < n_atoms; i++) {
-        const Atom<T> *atom_i = atoms_molecules[i];
-        
-        T mat_elem(0.0);
-        T vec_elem(0.0);
-        atom_i->PolMatSelf(mat_elem, vec_elem);
-        
-        pol_mat(i,i) = mat_elem;
-        vec_mat(i) += vec_elem;
-        
-        pol_mat(i,n_atoms) = atom_i->EffAtomicNumber();
-        pol_mat(n_atoms,i) = atom_i->EffAtomicNumber();
-        vec_mat(n_atoms) += atom_i->EffAtomicNumber();
-    }
-    
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
-    // pol_coeffs = pol_mat.lu().solve(vec_mat);
-    
-//    for (unsigned i = 0; i < n_atoms + 1; i++) {
-//        for (unsigned j = 0; j < n_atoms + 1; j++) {
-//            if (pol_mat(i,j) >= 0) {
-//                char buffer[256];
-//                snprintf(buffer,256," %8.3E  ",double(pol_mat(i,j)));
-//                std::cout << buffer;
-//            }
-//            else {
-//                char buffer[256];
-//                snprintf(buffer,256,"%8.3E  ",double(pol_mat(i,j)));
-//                std::cout << buffer;
-//            }
-//        }
-//        char buffer[256];
-//        if (vec_mat(i) >= 0) {
-//            snprintf(buffer, 256, " %8.3E  ", double(vec_mat(i)));
-//        }
-//        else {
-//            snprintf(buffer, 256, "%8.3E  ", double(vec_mat(i)));
-//        }
-//
-//        std::cout << "|  " << buffer;
-//        
-//        if (pol_coeffs(i) >= 0) {
-//            snprintf(buffer, 256, " %8.3E  ", double(pol_coeffs(i)));
-//        }
-//        else {
-//            snprintf(buffer, 256, "%8.3E  ", double(pol_coeffs(i)));
-//        }
-//        
-//        std::cout << buffer << std::endl;
-//    }
-//    
-//    std::cout << std::endl;
-    
-    double aux_sum = 0;
-    for (unsigned i = 0; i < n_atoms; i++) {
-        atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
     }
 }
 

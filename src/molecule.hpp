@@ -48,7 +48,7 @@ public:
     inline unsigned AtomicNumber() const { return atomic_number; }
     
     inline const T ModelPartialCharge() const {
-        return z_eff*(1.0 - pol_coeff);
+        return ECPEffectiveAtomicNumber(atomic_number)*(1.0 - pol_coeff);
     }
     
     inline void setECP() { z_eff = ECPEffectiveAtomicNumber(atomic_number); }

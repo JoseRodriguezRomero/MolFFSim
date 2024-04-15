@@ -2,6 +2,8 @@
 #define CLASS_MOLECULES_SYSTEM
 
 #include <stdio.h>
+#include <thread>
+#include <functional>
 
 #include <cmath>
 #include <vector>
@@ -68,6 +70,8 @@ public:
     // Use this for system-wide a geometry optimization, and point-energy
     // calculations of the system as a whole.
     void PolarizeMolecules();
+    void matThreadPol(void *pol_mat_vptr, void *vec_mat_vptr,
+                      const unsigned thread_id, const unsigned num_threads);
 
     T SystemEnergy();
     T SystemInteractionEnergy();
@@ -91,6 +95,7 @@ public:
     void setECP();
     void setFullE();
     void setXCRule();
+        
 };
 
 }

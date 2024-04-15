@@ -125,7 +125,7 @@ template<typename T>
 T XCEnergyD1(const std::vector<double> &lambda_pows, 
              const std::vector<T> &dist_pows) {
     // Multiply this with sqrt(lambda) * exp(-lambda*dist^2) / M_PI_SQRT
-    return 8*dist_pows[1]*lambda_pows[3];
+    return 8*dist_pows[1]*lambda_pows[2];
 }
 
 template<typename T>
@@ -220,7 +220,7 @@ T XCEnergyD10(const std::vector<double> &lambda_pows,
 template<typename T>
 T MolFFSim::NaiveModelE(const double lambda, const T &dist) {
     if (dist <= MIN_ATOM_POTENTIAL_DIST) {
-        return 2.0*sqrt(lambda)/M_PI_SQRT;
+        return 2.0*sqrt(lambda) / M_PI_SQRT;
     }
     
     return erf(sqrt(lambda)*dist) / dist;
@@ -247,7 +247,7 @@ T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
         }
     }
     
-    T aux_c = sqrt(lambda) * exp(-lambda*pow(dist,2)) / M_PI_SQRT;
+    T aux_c = sqrt(lambda) / (exp(lambda*dist_pows[2]) * M_PI_SQRT);
     
     T xc_energy = 0;
     xc_energy -= XCEnergy1(lambda_pows, dist_pows) / FACTORIAL_2;
@@ -285,7 +285,7 @@ T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
         }
     }
     
-    T aux_c = sqrt(lambda) * exp(-lambda*pow(dist,2)) /  M_PI_SQRT;
+    T aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) /  M_PI_SQRT;
     
     T xc_energy = 0;
     xc_energy += XCEnergyD1(lambda_pows, dist_pows) / FACTORIAL_3;

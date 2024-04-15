@@ -160,12 +160,12 @@ T Atom<T>::SelfEnergy() const {
         }
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,0);
-        energy += c_coeff*comb_xc_coeffs[1]*XCSpheSymm<T>(lambda_coeff,0);
+        energy += c_coeff*comb_xc_coeffs[4]*XCSpheSymm<T>(lambda_coeff,0);
     }
     
     // Cloud - Cloud
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
-        for (unsigned j = i + 1; j < cloud_c_coeffs.size(); j++) {
+        for (unsigned j = 0; j < cloud_c_coeffs.size(); j++) {
             T c_coeff = cloud_c_coeffs[i] * cloud_c_coeffs[j];
             
             if (i >= cloud_c_coeffs.size() - 3) {
@@ -181,7 +181,7 @@ T Atom<T>::SelfEnergy() const {
                 (cloud_lambda_coeffs[i] + cloud_lambda_coeffs[j]);
             
             energy += c_coeff*NaiveModelE<T>(lambda_coeff,0);
-            energy += c_coeff*comb_xc_coeffs[0]*XCSpheSymm<T>(lambda_coeff,0);
+            energy += c_coeff*comb_xc_coeffs[5]*XCSpheSymm<T>(lambda_coeff,0);
         }
     }
     
@@ -221,9 +221,9 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
         energy +=
-            c_coeff*comb_xc_coeffs[1]*XCSpheSymm<T>(lambda_coeff,atoms_dist);
+            c_coeff*comb_xc_coeffs[4]*XCSpheSymm<T>(lambda_coeff,atoms_dist);
         energy +=
-            c_coeff*comb_xc_coeffs[3]*XCCylinSymm<T>(lambda_coeff,atoms_dist);
+            c_coeff*comb_xc_coeffs[6]*XCCylinSymm<T>(lambda_coeff,atoms_dist);
     }
     
     // Nuclei - Cloud
@@ -237,9 +237,9 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
         
         energy -= c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
         energy +=
-            c_coeff*comb_xc_coeffs[1]*XCSpheSymm<T>(lambda_coeff,atoms_dist);
+            c_coeff*comb_xc_coeffs[4]*XCSpheSymm<T>(lambda_coeff,atoms_dist);
         energy +=
-            c_coeff*comb_xc_coeffs[3]*XCCylinSymm<T>(lambda_coeff,atoms_dist);
+            c_coeff*comb_xc_coeffs[6]*XCCylinSymm<T>(lambda_coeff,atoms_dist);
     }
     
     // Cloud - Cloud
@@ -259,9 +259,9 @@ T Atom<T>::InteractionEnergy(const Atom &other) const {
             }
             
             energy += c_coeff*NaiveModelE<T>(lambda_coeff,atoms_dist);
-            energy += c_coeff*comb_xc_coeffs[0]*
+            energy += c_coeff*comb_xc_coeffs[5]*
                 XCSpheSymm<T>(lambda_coeff,atoms_dist);
-            energy += c_coeff*comb_xc_coeffs[2]*
+            energy += c_coeff*comb_xc_coeffs[7]*
                 XCCylinSymm<T>(lambda_coeff,atoms_dist);
         }
     }
@@ -296,18 +296,18 @@ void Atom<T>::PolMatSelf(T &mat_elem, T &vec_elem) const {
                 XCSpheSymm<T>(lambda_coeff,0);
         }
     }
-    
+        
     // Cloud - Cloud
     for (unsigned i = 0; i < cloud_c_coeffs.size(); i++) {
-        for (unsigned j = i + 1; j < cloud_c_coeffs.size(); j++) {
+        for (unsigned j = 0; j < cloud_c_coeffs.size(); j++) {
             T c_coeff = cloud_c_coeffs[i] * cloud_c_coeffs[j];
             
             double lambda_coeff =
                 (cloud_lambda_coeffs[i] * cloud_lambda_coeffs[j]) /
                 (cloud_lambda_coeffs[i] + cloud_lambda_coeffs[j]);
             
-            bool cond1 = (i >= cloud_c_coeffs.size() - 3);
-            bool cond2 = (j >= cloud_c_coeffs.size() - 3);
+            bool cond1 = (i >= (cloud_c_coeffs.size() - 3));
+            bool cond2 = (j >= (cloud_c_coeffs.size() - 3));
             
             if (cond1 && cond2) {
                 mat_elem += 2.0*c_coeff*NaiveModelE<T>(lambda_coeff,0);
@@ -686,7 +686,47 @@ void Molecule<T>::setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z) {
 
 template<typename T>
 void Molecule<T>::Polarize() {
+    unsigned n_atoms = atoms_rot.size();
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
+    Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
     
+    for (unsigned i = 0; i < n_atoms; i++) {
+        T mat_elem(0.0);
+        T vec_elem(0.0);
+        atoms_rot[i].PolMatSelf(mat_elem, vec_elem);
+        
+        pol_mat(i,i) = mat_elem;
+        vec_mat(i) += vec_elem;
+        
+        pol_mat(i,n_atoms) =
+            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
+        pol_mat(n_atoms,i) = 
+            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
+        vec_mat(n_atoms) += 
+            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
+    }
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        for (unsigned j = i + 1; j < n_atoms; j++) {
+            T mat_elem(0.0);
+            T vec_elem_i(0.0);
+            T vec_elem_j(0.0);
+            atoms_rot[i].PolMatInteraction(atoms_rot[j], mat_elem, vec_elem_i,
+                                           vec_elem_j);
+            
+             vec_mat(i) += vec_elem_i;
+             vec_mat(j) += vec_elem_j;
+             pol_mat(i,j) = mat_elem;
+             pol_mat(j,i) = mat_elem;
+        }
+    }
+    
+    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        atoms_rot[i].setPolCoeff(pol_coeffs(i));
+    }
 }
 
 template<typename T>
