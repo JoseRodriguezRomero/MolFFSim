@@ -23,25 +23,6 @@ System<T>::System() {
 
 template<typename T>
 System<T>::~System() {
-//    std::cout << std::endl;
-//    for (auto it1 = molecule_list.begin(); it1 != molecule_list.end(); it1++) {
-//        auto it2_end = it1->second.Atoms().cend();
-//        auto it2_begin = it1->second.Atoms().cbegin();
-//        for (auto it2 = it2_begin; it2 != it2_end; it2++) {
-//            char buffer[256];
-//            snprintf(buffer,256,"%5s %15.5lf",
-//                     LabelFromAtomicNumber(it2->AtomicNumber()).c_str(),
-//                     it2->CloudCCoeffs().at(0));
-//            std::cout << buffer << std::endl;
-//            
-//            auto it3_end = it2->CloudCCoeffs().cend();
-//            auto it3_begin = it2->CloudCCoeffs().cbegin() + 1;
-//            for (auto it3 = it3_begin; it3 != it3_end; it3++) {
-//                snprintf(buffer,256,"%5s %15.5lf", " ", *it3);
-//                std::cout << buffer << std::endl;
-//            }
-//        }
-//    }
 }
 
 template<typename T>
@@ -607,9 +588,15 @@ void System<T>::PolarizeMolecules() {
         vec_mat += aux_vec_mat[i];
     }
     
+#ifdef _OPENMP
+    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+    Eigen::PartialPivLU<Eigen::Matrix<T,
+        Eigen::Dynamic,Eigen::Dynamic>> lu_decomp(pol_mat);
+    pol_coeffs = lu_decomp.solve(vec_mat);
+#else
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     pol_coeffs = pol_mat.ldlt().solve(vec_mat);
-    // pol_coeffs = pol_mat.lu().solve(vec_mat);
+#endif
     
     for (unsigned i = 0; i < n_atoms; i++) {
         atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
@@ -643,9 +630,12 @@ void System<T>::matThreadPol(void *pol_mat_vptr, void *vec_mat_vptr,
         (*pol_mat)(i,i) = mat_elem;
         (*vec_mat)(i) += vec_elem;
         
-        (*pol_mat)(i,n_atoms) = ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*pol_mat)(n_atoms,i) = ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*vec_mat)(n_atoms) += ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*pol_mat)(i,n_atoms) = 
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*pol_mat)(n_atoms,i) = 
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*vec_mat)(n_atoms) += 
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
     }
     
     for (unsigned i = 0; i < n_atoms; i++) {
@@ -741,7 +731,8 @@ const std::vector<std::string> System<T>::ListMoleculeTypes() const {
 }
 
 template <typename T>
-const unsigned System<T>::MoleculeInstances(const std::string &molec_name) const {
+const unsigned System<T>::MoleculeInstances(
+                                        const std::string &molec_name) const {
     if (molecule_instances.find(molec_name) == molecule_instances.end()) {
         return 0;
     }
@@ -750,7 +741,8 @@ const unsigned System<T>::MoleculeInstances(const std::string &molec_name) const
 }
 
 template <typename T>
-const double System<T>::MoleculeMonomerEnergy(const std::string &molec_name) const {
+const double System<T>::MoleculeMonomerEnergy(
+                                        const std::string &molec_name) const {
     if (monomer_energies.find(molec_name) == monomer_energies.end()) {
         return 0;
     }
