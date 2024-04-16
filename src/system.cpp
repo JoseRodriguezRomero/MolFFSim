@@ -243,6 +243,10 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     dy /= BOHR_TO_ANGSTROM;
                     dz /= BOHR_TO_ANGSTROM;
                     
+                    thx *= (M_PI / 180.0);
+                    thy *= (M_PI / 180.0);
+                    thz *= (M_PI / 180.0);
+                    
                     auto molec_it = molecule_list.find(molec_label);
                     if (molec_it == molecule_list.end()) {
                         std::cout << "Unknown molecular species \"";

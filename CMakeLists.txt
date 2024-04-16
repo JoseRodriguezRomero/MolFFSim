@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(MolFFSim LANGUAGES CXX)
 
 # Set C++ compiler (replace "g++" with your desired compiler)
-set(CMAKE_CXX_COMPILER g++-13)
+set(CMAKE_CXX_COMPILER g++)
 
 # Check if OpenMP is available
 find_package(OpenMP)
