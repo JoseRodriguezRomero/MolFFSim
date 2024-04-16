@@ -9,6 +9,7 @@
 #define MAX_PRINT_BUFFER_SIZE       256
 
 #define BOHR_TO_ANGSTROM            0.529177249
+#define HARTREE_TO_KJ_MOL           2625.5002
 
 #include "system.hpp"
 
@@ -707,7 +708,7 @@ void System<T>::getMonomerEnergies() {
     monomer_energies.clear();
     
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
-        monomer_energies[it->first] = double(it->second.SelfEnergy());
+        monomer_energies[it->first] =  double(it->second.SelfEnergy());
     }
 }
 
@@ -830,7 +831,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
     for (std::string molec_name : system.ListMoleculeTypes()) {
         snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%25s %25u %35.5E", 
                  molec_name.c_str(), system.MoleculeInstances(molec_name),
-                 system.MoleculeMonomerEnergy(molec_name));
+                 (system.MoleculeMonomerEnergy(molec_name))*HARTREE_TO_KJ_MOL);
         os << buffer << std::endl;
     }
     

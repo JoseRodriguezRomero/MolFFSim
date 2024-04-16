@@ -1,4 +1,5 @@
 #define MAX_PRINT_BUFFER_SIZE       256
+#define HARTREE_TO_KJ_MOL           2625.5002
 
 #include <fstream>
 #include <iostream>
@@ -68,11 +69,12 @@ int main(int argc, char** argv) {
         std::cout << system << std::endl;;
                 
         snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                 "Total Energy:", system.SystemEnergy());
+                 "Total Energy:", HARTREE_TO_KJ_MOL * system.SystemEnergy());
         std::cout << buffer << std::endl;
         
         snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                 "Interaction Energy:", system.SystemInteractionEnergy());
+                 "Interaction Energy:", 
+                 HARTREE_TO_KJ_MOL * system.SystemInteractionEnergy());
         std::cout << buffer << std::endl << std::endl;
     }
     else if (diff_is_forward) {
@@ -84,11 +86,12 @@ int main(int argc, char** argv) {
             std::cout << system << std::endl;;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Total Energy:", double(system.SystemEnergy()));
+                     "Total Energy:", 
+                     HARTREE_TO_KJ_MOL * double(system.SystemEnergy()));
             std::cout << buffer << std::endl;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Interaction Energy:", 
+                     "Interaction Energy:", HARTREE_TO_KJ_MOL *
                      double(system.SystemInteractionEnergy()));
             std::cout << buffer << std::endl << std::endl;
         }
@@ -104,11 +107,12 @@ int main(int argc, char** argv) {
             std::cout << system << std::endl;;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Total Energy:", double(system.SystemEnergy()));
+                     "Total Energy:",
+                     HARTREE_TO_KJ_MOL * double(system.SystemEnergy()));
             std::cout << buffer << std::endl;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Interaction Energy:",
+                     "Interaction Energy:", HARTREE_TO_KJ_MOL * 
                      double(system.SystemInteractionEnergy()));
             std::cout << buffer << std::endl << std::endl;
         }
