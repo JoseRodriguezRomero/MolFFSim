@@ -5,7 +5,7 @@ To address the inaccuracies stemming from this oversimplified model, we introduc
 
 Moreover, the exchange and correlation component is decomposed into four parts. Two parts concern electron-electron and electron-nuclei interactions with spherical symmetry in the fictitious clouds, while the other two involve cylindrical symmetry along the axis between pairs of atoms. For a system with only two atoms, labeled as $a$ and $b$, this exchange and correlation component can be expressed as:
 ```math
-\mathrm{XC}_{ab} = \sum_{k = 1}^K \left( - 1 \right)^k \left( A \frac{\mathrm{XC}_{ab}^{\mathrm{EE} \left( k \right)}}{\left( 2 k \right) !}  + B \frac{\mathrm{XC}_{ab}^{\mathrm{EN} \left( k \right)}}{\left( 2 k \right) !} - C \frac{\mathrm{XC}_{ab}^{\mathrm{ED} \left( k \right)}}{\left( 2 k + 1 \right) !} - D \frac{\mathrm{XC}_{ab}^{\mathrm{ND} \left( k \right)}}{\left( 2 k + 1 \right) !} \right),
+\mathrm{XC}_{ab} = \sum_{k = 1}^K \left( - 1 \right)^k \left( A \frac{\mathrm{XC}_{ab}^{\mathrm{EE} \left( k \right)}}{\left( 2 k \right) !}  + B \frac{\mathrm{XC}_{ab}^{\mathrm{EN} \left( k \right)}}{\left( 2 k \right) !} + C \frac{\mathrm{XC}_{ab}^{\mathrm{ED} \left( k \right)}}{\left( 2 k + 1 \right) !} + D \frac{\mathrm{XC}_{ab}^{\mathrm{ND} \left( k \right)}}{\left( 2 k + 1 \right) !} \right),
 ```
 here, $K$ denotes the truncation order of the series (set to ten in this context), and $A$, $B$, $C$, and $D$ represent real-valued coefficients fitted against high-accuracy *ab initio* reference calculations, specifically using the CCSD(T)/cc-pVTZ level of theory. The respective functionals are defined as:
 ```math
