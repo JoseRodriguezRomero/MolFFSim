@@ -230,7 +230,8 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     double thx, thy, thz;
                     
                     int valid_args = 
-                        sscanf(line.c_str(), "%s %s %s %lf %lf %lf %lf %lf %lf",
+                        sscanf(line.c_str(), 
+                               "%s %s %s %lf %lf %lf %lf %lf %lf",
                                molec_label, print_opt, rot_opt, &dx, &dy, &dz,
                                &thx, &thy, &thz);
                     
@@ -403,7 +404,8 @@ void System<T>::readXCCoefficients(const std::string &xc_coeff_collection) {
         
         char elem_label[8];
         double xc_coeffs[8];
-        int num_args = sscanf(line.c_str(),"%s %lf %lf %lf %lf %lf %lf %lf %lf",
+        int num_args = sscanf(line.c_str(),
+                              "%s %lf %lf %lf %lf %lf %lf %lf %lf",
                               elem_label, xc_coeffs + 0, xc_coeffs + 1,
                               xc_coeffs + 2, xc_coeffs + 3, xc_coeffs + 4,
                               xc_coeffs + 5, xc_coeffs + 6, xc_coeffs + 7);
@@ -562,36 +564,82 @@ void System<T>::setPeriodicBoxSizes(const std::vector<double> box_side_len) {
 }
 
 template<typename T>
+void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
+                  Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *pol_mat,
+                  Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *vec_mat,
+                  const unsigned thread_id, const unsigned num_threads) {
+    unsigned n_atoms = atoms_molecules.size();
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        if (thread_id != (i % num_threads)) {
+            continue;
+        }
+        
+        T mat_elem(0.0);
+        T vec_elem(0.0);
+        const Atom<T> *atom_i = atoms_molecules[i];
+        atom_i->PolMatSelf(mat_elem, vec_elem);
+        
+        (*pol_mat)(i,i) = mat_elem;
+        (*vec_mat)(i,thread_id) += vec_elem;
+        
+        (*pol_mat)(i,n_atoms) = 
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*pol_mat)(n_atoms,i) = 
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*vec_mat)(n_atoms,thread_id) +=
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+    }
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        const Atom<T> *atom_i = atoms_molecules[i];
+        for (unsigned j = i + 1; j < n_atoms; j++) {
+            if (thread_id != ((i*n_atoms + j) % num_threads)) {
+                continue;
+            }
+            
+            const Atom<T> *atom_j = atoms_molecules[j];
+            T mat_elem(0.0);
+            T vec_elem_i(0.0);
+            T vec_elem_j(0.0);
+            atom_i->PolMatInteraction(*atom_j, mat_elem,
+                                      vec_elem_i, vec_elem_j);
+            
+            (*vec_mat)(i,thread_id) += vec_elem_i;
+            (*vec_mat)(j,thread_id) += vec_elem_j;
+            (*pol_mat)(i,j) = mat_elem;
+            (*pol_mat)(j,i) = mat_elem;
+        }
+    }
+}
+
+template<typename T>
 void System<T>::PolarizeMolecules() {
     unsigned n_atoms = atoms_molecules.size();
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
-    Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
+        pol_mat(n_atoms+1,n_atoms+1);
     
     unsigned n_threads = std::thread::hardware_concurrency();
     std::thread *calc_threads[n_threads - 1];
-    
-    std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> aux_vec_mat;
-    for (unsigned i = 0; i < n_threads - 1; i++) {
-        aux_vec_mat.push_back(vec_mat);
-    }
+        
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
+        aux_vec_mat(n_atoms+1, n_threads);
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]  =
-            new std::thread(std::bind(&System<T>::matThreadPol, *this,
-                                      &pol_mat, &(aux_vec_mat[i]), i,
-                                      n_threads));
+            new std::thread(std::bind(&matThreadPol<T>, atoms_molecules,
+                                      &pol_mat, &aux_vec_mat, i, n_threads));
     }
     
-    matThreadPol(&pol_mat, &vec_mat, n_threads - 1, n_threads);
+    matThreadPol(atoms_molecules, &pol_mat, &aux_vec_mat, n_threads - 1,
+                 n_threads);
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]->join();
         delete calc_threads[i];
     }
         
-    for (unsigned i = 0; i < n_threads - 1; i++) {
-        vec_mat += aux_vec_mat[i];
-    }
+    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     
 #ifdef _OPENMP
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
@@ -609,59 +657,30 @@ void System<T>::PolarizeMolecules() {
 }
 
 template<typename T>
-void System<T>::matThreadPol(void *pol_mat_vptr, void *vec_mat_vptr,
-                             const unsigned thread_id,
-                             const unsigned num_threads) {
-    
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *pol_mat =
-    static_cast<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>*>(pol_mat_vptr);
-    
-    Eigen::Matrix<T,Eigen::Dynamic,1> *vec_mat =
-    static_cast<Eigen::Matrix<T,Eigen::Dynamic,1>*>(vec_mat_vptr);
-    
+void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
+                     Eigen::Vector<T,Eigen::Dynamic> *energy_vec,
+                     const unsigned thread_id, const unsigned num_threads) {
     unsigned n_atoms = atoms_molecules.size();
+    (*energy_vec)(thread_id) = T(0.0);
     
     for (unsigned i = 0; i < n_atoms; i++) {
-        unsigned proc_id = i % num_threads;
-        if (thread_id != proc_id) {
+        if (thread_id != (i % num_threads)) {
             continue;
         }
         
-        T mat_elem(0.0);
-        T vec_elem(0.0);
-        const Atom<T> *atom_i = atoms_molecules[i];
-        atom_i->PolMatSelf(mat_elem, vec_elem);
-        
-        (*pol_mat)(i,i) = mat_elem;
-        (*vec_mat)(i) += vec_elem;
-        
-        (*pol_mat)(i,n_atoms) = 
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*pol_mat)(n_atoms,i) = 
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*vec_mat)(n_atoms) += 
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        (*energy_vec)(thread_id) += atoms_molecules[i]->SelfEnergy();
     }
     
     for (unsigned i = 0; i < n_atoms; i++) {
-        const Atom<T> *atom_i = atoms_molecules[i];
         for (unsigned j = i + 1; j < n_atoms; j++) {
-            unsigned proc_id = (i*n_atoms + j) % num_threads;
-            if (thread_id != proc_id) {
+            if (thread_id != ((i*n_atoms + j) % num_threads)) {
                 continue;
             }
             
-            const Atom<T> *atom_j = atoms_molecules[j];
-            T mat_elem(0.0);
-            T vec_elem_i(0.0);
-            T vec_elem_j(0.0);
-            atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i,
-                                      vec_elem_j);
-            
-            (*vec_mat)(i) += vec_elem_i;
-            (*vec_mat)(j) += vec_elem_j;
-            (*pol_mat)(i,j) = mat_elem;
-            (*pol_mat)(j,i) = mat_elem;
+            MolFFSim::Atom<T> *at_i_ptr = atoms_molecules[i];
+            MolFFSim::Atom<T> *at_j_ptr = atoms_molecules[j];
+            (*energy_vec)(thread_id) += 
+                at_i_ptr->InteractionEnergy(*at_j_ptr);
         }
     }
 }
@@ -670,18 +689,23 @@ template<typename T>
 T System<T>::SystemEnergy() {
     PolarizeMolecules();
     
-    T energy = T(0.0);
-    for (auto it1 = molecules.cbegin(); it1 != molecules.cend(); it1++) {
-        for (auto it2 = it1 + 1; it2 != molecules.cend(); it2++) {
-            energy += it1->InteractionEnergy(*it2);
-        }
+    unsigned n_threads = std::thread::hardware_concurrency();
+    std::thread *calc_threads[n_threads - 1];
+    
+    Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]  =
+            new std::thread(std::bind(&sysThreadEnergy<T>, atoms_molecules,
+                                      &energy_vec, i, n_threads));
+    }
+    sysThreadEnergy(atoms_molecules, &energy_vec, n_threads - 1, n_threads);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]->join();
+        delete calc_threads[i];
     }
     
-    for (auto it1 = molecules.cbegin(); it1 != molecules.cend(); it1++) {
-        energy += it1->SelfEnergy();
-    }
-    
-    return energy;
+    return energy_vec.sum();
 }
 
 template<typename T>

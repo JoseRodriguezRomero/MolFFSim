@@ -56,6 +56,8 @@ private:
     
     unsigned system_sum_charges;
     
+    Eigen::Vector<T,Eigen::Dynamic> sys_params;
+    
 public:
     System();
     ~System();
@@ -67,11 +69,23 @@ public:
     
     void ReadInputFile(std::ifstream &input_file);
     
+    // A vector with 8*N entries, where N is the number of molecules in the
+    // system. The first three entries are the displacement vector, the
+    // next four are the components of the rotaiton quaternion, and the last
+    // entry, that corresponds to each molecule, is a Lagrange multiplier to
+    // garantee that the quaternion rotation matrix is unitary.
+    inline Eigen::Vector<T,Eigen::Dynamic> SysParams() const {
+        return sys_params;
+    }
+    
+    inline void SetSysParams(const Eigen::Vector<T,
+                             Eigen::Dynamic> &sys_params) {
+        this->sys_params = sys_params;
+    }
+    
     // Use this for system-wide a geometry optimization, and point-energy
     // calculations of the system as a whole.
     void PolarizeMolecules();
-    void matThreadPol(void *pol_mat_vptr, void *vec_mat_vptr,
-                      const unsigned thread_id, const unsigned num_threads);
 
     T SystemEnergy();
     T SystemInteractionEnergy();

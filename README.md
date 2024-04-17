@@ -14,10 +14,10 @@ MolFFSim is an open-source program coded in C++ specifically designed for perfor
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)
   * [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
 
-Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Both forward and reverse modes are fully supported, without the need of recompiling the source code. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using a combination of `std::thread` and [OpenMP](https://www.openmp.org/).
+Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Both forward and reverse modes are fully supported, without the need of recompiling the source code. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using a combination of `std::thread` and [OpenMP](https://www.openmp.org/). All the non-linear minimizations for geometry optimization are handled with [OptimLib](https://optimlib.readthedocs.io/en/latest/index.html#).
 
 ## Compiling and installing
-In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that CMake is installed, along with the C++ libraries [autodiff](https://autodiff.github.io/) and [Eigen](https://gitlab.com/libeigen/eigen). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.
+In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that CMake is installed, along with the C++ libraries [Eigen](https://gitlab.com/libeigen/eigen), [autodiff](https://autodiff.github.io/) and [OptimLib](https://optimlib.readthedocs.io/en/latest/index.html#). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.
 
 Once these prerequisites are fulfilled, follow these steps to compile and install the program:
 ```Bash
