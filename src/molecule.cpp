@@ -487,8 +487,8 @@ template<typename T>
 Molecule<T>::Molecule(const Molecule& other) {
     center_r = other.Pos();
     center_v = other.Vel();
-    center_qr = other.RotRotQ();
-    center_qv = other.RotRotQVel();
+    center_qr = other.RotQ();
+    center_qv = other.RotQVel();
     
     atoms = other.const_Atoms();
     atoms_rot = other.const_AtomsRotAndTrans();
@@ -736,8 +736,8 @@ void Molecule<T>::operator=(const Molecule& other) {
     
     center_r = other.Pos();
     center_v = other.Vel();
-    center_qr = other.RotRotQ();
-    center_qv = other.RotRotQVel();
+    center_qr = other.RotQ();
+    center_qv = other.RotQVel();
     
     is_periodic = other.isPeriodic();
     box_side_len = other.PeriodicBoxSizes();
@@ -797,14 +797,11 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
 
 // Explicit instantiation of all the types for the class Atom.
 template class MolFFSim::Atom<double>;
-template class MolFFSim::Atom<autodiff::var>;
 template class MolFFSim::Atom<autodiff::dual>;
 
 // Explicit instantiation of all the types for the class Molecule.
 template class MolFFSim::Molecule<double>;
-template class MolFFSim::Molecule<autodiff::var>;
 template class MolFFSim::Molecule<autodiff::dual>;
 
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<double> &molec);
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<autodiff::var> &molec);
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<autodiff::dual> &molec);

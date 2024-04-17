@@ -39,6 +39,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
     elem_lambda_coeff.clear();
     elem_xc_coeff.clear();
     system_sum_charges = 0;
+    sys_params.resize(0);
     
     std::string line;
     while (std::getline(input_file, line)) {
@@ -275,6 +276,18 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     molecules.back().setPos({dx,dy,dz});
                     
                     molecules.back().applyRotationAndTranslation();
+                    
+                    unsigned old_size = sys_params.size();
+                    sys_params.conservativeResize(old_size + 8);
+                    
+                    sys_params[old_size + 0] = dx;
+                    sys_params[old_size + 1] = dy;
+                    sys_params[old_size + 2] = dz;
+                    sys_params[old_size + 3] = molecules.back().RotQ().w();
+                    sys_params[old_size + 4] = molecules.back().RotQ().x();
+                    sys_params[old_size + 5] = molecules.back().RotQ().y();
+                    sys_params[old_size + 6] = molecules.back().RotQ().z();
+                    sys_params[old_size + 7] = 1.0;
                 }
                 else if (line.find("QUATERNION") != std::string::npos) {
                     double qw, qx, qy, qz;
@@ -321,6 +334,18 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     molecules.back().setPos({dx,dy,dz});
                     
                     molecules.back().applyRotationAndTranslation();
+                    
+                    unsigned old_size = sys_params.size();
+                    sys_params.conservativeResize(old_size + 8);
+                    
+                    sys_params[old_size + 0] = dx;
+                    sys_params[old_size + 1] = dy;
+                    sys_params[old_size + 2] = dz;
+                    sys_params[old_size + 3] = qw;
+                    sys_params[old_size + 4] = qx;
+                    sys_params[old_size + 5] = qy;
+                    sys_params[old_size + 6] = qz;
+                    sys_params[old_size + 7] = 1.0;
                 }
                 else {
                     std::cout << "Rotation representation is incorrect or is ";
@@ -614,6 +639,55 @@ void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
 }
 
 template<typename T>
+void System<T>::SetSysParams(const Eigen::Vector<T,
+                             Eigen::Dynamic> &sys_params) {
+    this->sys_params = sys_params;
+    
+    unsigned n_atoms = molecules.size();
+    for (unsigned i = 0; i < n_atoms; i++) {
+        Eigen::Vector3<T> pos;
+        pos.x() = this->sys_params(i*8 + 0);
+        pos.y() = this->sys_params(i*8 + 1);
+        pos.z() = this->sys_params(i*8 + 2);
+        
+        Eigen::Quaternion<T> qr;
+        qr.w() = this->sys_params(i*8 + 3);
+        qr.x() = this->sys_params(i*8 + 4);
+        qr.y() = this->sys_params(i*8 + 5);
+        qr.z() = this->sys_params(i*8 + 6);
+        
+        // T lrg_mult = this->sys_params(i*8 + 7);
+        
+        molecules[i].setPos(pos);
+        molecules[i].setRotQ(qr);
+        molecules[i].applyRotationAndTranslation();
+    }
+}
+
+template<>
+Eigen::Vector<autodiff::dual,Eigen::Dynamic>
+System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
+                                             Eigen::Dynamic> &sys_params) {
+    if (this->sys_params != sys_params) {
+        SetSysParams(sys_params);
+    }
+    
+    unsigned num_params = sys_params.size();
+    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient;
+    gradient.resize(num_params);
+    
+    auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
+                         this, std::placeholders::_1);
+    
+    for (unsigned i = 0; i < num_params; i++) {
+        gradient[i] = derivative(foo, autodiff::wrt(this->sys_params(i)),
+                                 autodiff::at(this->sys_params));
+    }
+    
+    return gradient;
+}
+
+template<typename T>
 void System<T>::PolarizeMolecules() {
     unsigned n_atoms = atoms_molecules.size();
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
@@ -704,7 +778,7 @@ T System<T>::SystemEnergy() {
         calc_threads[i]->join();
         delete calc_threads[i];
     }
-    
+        
     return energy_vec.sum();
 }
 
@@ -871,9 +945,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
 
 // Explicit instantiation of all the types for the class System.
 template class MolFFSim::System<double>;
-template class MolFFSim::System<autodiff::var>;
 template class MolFFSim::System<autodiff::dual>;
 
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<double> &system);
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<autodiff::var> &system);
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<autodiff::dual> &system);

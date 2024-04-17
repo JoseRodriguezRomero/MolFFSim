@@ -14,10 +14,10 @@ MolFFSim is an open-source program coded in C++ specifically designed for perfor
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)
   * [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
 
-Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Both forward and reverse modes are fully supported, without the need of recompiling the source code. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using a combination of `std::thread` and [OpenMP](https://www.openmp.org/). All the non-linear minimizations for geometry optimization are handled with [OptimLib](https://optimlib.readthedocs.io/en/latest/index.html#).
+Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Currently, only forward mode automatic differentiation is supported. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using a combination of `std::thread` and [OpenMP](https://www.openmp.org/). All non-linear minimizations problems, related to both kinds of geometry optimizations supported in this program, are handled through [libLBFGS](https://www.chokkan.org/software/liblbfgs/).
 
 ## Compiling and installing
-In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that CMake is installed, along with the C++ libraries [Eigen](https://gitlab.com/libeigen/eigen), [autodiff](https://autodiff.github.io/) and [OptimLib](https://optimlib.readthedocs.io/en/latest/index.html#). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.
+In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that [CMake](https://gitlab.kitware.com/cmake/cmake) and [OpenMP](https://www.openmp.org/) are installed, along with the C++ libraries [Eigen](https://gitlab.com/libeigen/eigen), [autodiff](https://autodiff.github.io/) and [libLBFGS](https://www.chokkan.org/software/liblbfgs/). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.
 
 Once these prerequisites are fulfilled, follow these steps to compile and install the program:
 ```Bash
@@ -85,22 +85,12 @@ MolFFSim <input_file> system_geom_optim
 ```
 The output format of this calculation mirrors that of a point-energy calculation. 
 
-### Forward and reverse mode automatic differentiation
+## Automatic differentiation
 To model the [Mulliken charges](https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Book%3A_Quantum_States_of_Atoms_and_Molecules_(Zielinksi_et_al)/10%3A_Theories_of_Electronic_Molecular_Structure/10.07%3A_Mulliken_Populations) of a molecular system, a fictitious self-energy functional is minimized. This functional mirrors the form of the functional used for modeling the system energy. Minimizing this problem simplifies to minimizing a quadratic function, thus solving a system of linear equations. The size of this system scales linearly with the number of atoms in the system.
 
-To derive expressions for the gradient and Hessian, knowledge of the matrix inverse associated with the aforementioned minimization problem is required. Therefore, algorithmic differentiation is used.
+To derive expressions for the gradient and Hessian, knowledge of the matrix inverse associated with the aforementioned minimization problem is required. Therefore, algorithmic differentiation is used, more specifically forward mode. 
 
-To opt for forward mode automatic differentiation during a geometry optimization of a system, use the following command:
-```Bash
-MolFFSim <input_file> system_geom_optim forward_mode
-```
-
-For reverse mode, use:
-```Bash
-MolFFSim <input_file> system_geom_optim reverse_mode
-```
-
-If not specified, reverse mode automatic differentiation is the default. Additionally, for point-energy calculations, gradients or Hessians are unnecessary. Thus, the choice between `forward_mode` or `reverse_mode` is inconsequential.
+For the time being, reverse mode is not supported due to poor performance issues stemming from the system of linear equations that needs to be solve to determine the atomic polarization coefficients.
 
 ## Atom centered basis functions
 The program's core functionality revolves around determining energies and partial charges. These are computed based on the non-interacting ground state eigendensities of each atom in the system. These densities are approximated by a linear combination of s-type Gaussian basis functions centered at the atomic coordinates.

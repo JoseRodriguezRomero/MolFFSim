@@ -3,7 +3,6 @@
 
 #include <cmath>
 
-#include <autodiff/reverse/var.hpp>
 #include <autodiff/forward/dual.hpp>
 
 namespace MolFFSim {

@@ -4,15 +4,11 @@
 #include <fstream>
 #include <iostream>
 
-#include <autodiff/reverse/var.hpp>
 #include <autodiff/forward/dual.hpp>
 
 #include "system.hpp"
 
 int main(int argc, char** argv) {
-    // True if forward-mode automatic differentiation is to be used.
-    bool diff_is_forward = false;
-    
     // True if a single-point energy calculation is to be made.
     bool point_energy = true;
     
@@ -50,12 +46,6 @@ int main(int argc, char** argv) {
             system_geom_optim = false;
             molec_geom_optim = true;
         }
-        else if (!strcmp(argv[i], "forward_mode")) {
-            diff_is_forward = true;
-        }
-        else if (!strcmp(argv[i], "reverse_mode")) {
-            diff_is_forward = false;
-        }
     }
     
     char buffer[MAX_PRINT_BUFFER_SIZE];
@@ -77,33 +67,16 @@ int main(int argc, char** argv) {
                  HARTREE_TO_KJ_MOL * system.SystemInteractionEnergy());
         std::cout << buffer << std::endl << std::endl;
     }
-    else if (diff_is_forward) {
+    else {
         MolFFSim::System<autodiff::dual> system;
         system.ReadInputFile(input_file);
         input_file.close();
         
         if (system_geom_optim) {
-            std::cout << system << std::endl;;
+            Eigen::Vector<autodiff::dual,
+                Eigen::Dynamic> sys_params = system.SysParams();
             
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Total Energy:", 
-                     HARTREE_TO_KJ_MOL * double(system.SystemEnergy()));
-            std::cout << buffer << std::endl;
-            
-            snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Interaction Energy:", HARTREE_TO_KJ_MOL *
-                     double(system.SystemInteractionEnergy()));
-            std::cout << buffer << std::endl << std::endl;
-        }
-        else if (molec_geom_optim) {
-        }
-    }
-    else {
-        MolFFSim::System<autodiff::var> system;
-        system.ReadInputFile(input_file);
-        input_file.close();
-        
-        if (system_geom_optim) {
+            system.PolarizeMolecules();
             std::cout << system << std::endl;;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
@@ -112,7 +85,7 @@ int main(int argc, char** argv) {
             std::cout << buffer << std::endl;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
-                     "Interaction Energy:", HARTREE_TO_KJ_MOL * 
+                     "Interaction Energy:", HARTREE_TO_KJ_MOL *
                      double(system.SystemInteractionEnergy()));
             std::cout << buffer << std::endl << std::endl;
         }

@@ -41,6 +41,9 @@ find_package(eigen3 REQUIRED)
 # Find autodiff library
 find_package(autodiff REQUIRED)
 
+# Find liblbfgs library
+find_package(lbfgs REQUIRED)
+
 # Add /usr/local/include to the list of include directories
 include_directories(/usr/local/include)
 

@@ -2,18 +2,17 @@
 #define CLASS_MOLECULES_SYSTEM
 
 #include <stdio.h>
-#include <thread>
-#include <functional>
 
 #include <cmath>
+#include <thread>
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 #include <unordered_map>
 
-#include <autodiff/reverse/var.hpp>
 #include <autodiff/forward/dual.hpp>
 
 #include "auxiliary_functions.hpp"
@@ -57,6 +56,7 @@ private:
     unsigned system_sum_charges;
     
     Eigen::Vector<T,Eigen::Dynamic> sys_params;
+    const std::thread::id t_id = std::this_thread::get_id();
     
 public:
     System();
@@ -77,19 +77,24 @@ public:
     inline Eigen::Vector<T,Eigen::Dynamic> SysParams() const {
         return sys_params;
     }
+
+    void SetSysParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params);
     
-    inline void SetSysParams(const Eigen::Vector<T,
-                             Eigen::Dynamic> &sys_params) {
-        this->sys_params = sys_params;
+    inline T
+    EnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params) {
+        SetSysParams(sys_params);
+        return SystemEnergy();
     }
     
+    Eigen::Vector<T,Eigen::Dynamic> 
+    GradEnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params);
+        
     // Use this for system-wide a geometry optimization, and point-energy
     // calculations of the system as a whole.
     void PolarizeMolecules();
 
     T SystemEnergy();
     T SystemInteractionEnergy();
-    T SystemEnergyFromGeom(const std::vector<T> angles_and);
     
     const std::vector<std::string> ListMoleculeTypes() const;
     const unsigned MoleculeInstances(const std::string &molec_name) const;

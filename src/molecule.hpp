@@ -10,7 +10,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autodiff/reverse/var.hpp>
+
 #include <autodiff/forward/dual.hpp>
 
 #include "auxiliary_functions.hpp"
@@ -86,7 +86,7 @@ public:
             }
         }
         
-        return dist_vec.norm();
+        return abs(dist_vec.norm());
     }
     
     inline const std::vector<double>& CloudCCoeffs() const {
@@ -182,8 +182,8 @@ public:
     
     inline Eigen::Vector3<T> Pos() const { return center_r; }
     inline Eigen::Vector3<T> Vel() const { return center_v; }
-    inline Eigen::Quaternion<T> RotRotQ() const { return center_qr; }
-    inline Eigen::Quaternion<T> RotRotQVel() const { return center_qv; }
+    inline Eigen::Quaternion<T> RotQ() const { return center_qr; }
+    inline Eigen::Quaternion<T> RotQVel() const { return center_qv; }
     
     inline const std::vector<Atom<double>>& const_Atoms() const {
         return atoms;
