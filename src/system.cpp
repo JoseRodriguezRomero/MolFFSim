@@ -278,7 +278,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     molecules.back().applyRotationAndTranslation();
                     
                     unsigned old_size = sys_params.size();
-                    sys_params.conservativeResize(old_size + 8);
+                    sys_params.conservativeResize(old_size + 7);
                     
                     sys_params[old_size + 0] = dx;
                     sys_params[old_size + 1] = dy;
@@ -287,7 +287,6 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     sys_params[old_size + 4] = molecules.back().RotQ().x();
                     sys_params[old_size + 5] = molecules.back().RotQ().y();
                     sys_params[old_size + 6] = molecules.back().RotQ().z();
-                    sys_params[old_size + 7] = 1.0;
                 }
                 else if (line.find("QUATERNION") != std::string::npos) {
                     double qw, qx, qy, qz;
@@ -336,7 +335,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     molecules.back().applyRotationAndTranslation();
                     
                     unsigned old_size = sys_params.size();
-                    sys_params.conservativeResize(old_size + 8);
+                    sys_params.conservativeResize(old_size + 7);
                     
                     sys_params[old_size + 0] = dx;
                     sys_params[old_size + 1] = dy;
@@ -345,7 +344,6 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     sys_params[old_size + 4] = qx;
                     sys_params[old_size + 5] = qy;
                     sys_params[old_size + 6] = qz;
-                    sys_params[old_size + 7] = 1.0;
                 }
                 else {
                     std::cout << "Rotation representation is incorrect or is ";
@@ -589,10 +587,56 @@ void System<T>::setPeriodicBoxSizes(const std::vector<double> box_side_len) {
 }
 
 template<typename T>
-void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
-                  Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
-                  Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
-                  const unsigned thread_id, const unsigned num_threads) {
+void System<T>::SetSysParams(const Eigen::Vector<T,
+                             Eigen::Dynamic> &sys_params) {
+    this->sys_params = sys_params;
+    
+    unsigned n_atoms = molecules.size();
+    for (unsigned i = 0; i < n_atoms; i++) {
+        Eigen::Vector3<T> pos;
+        pos.x() = this->sys_params(i*7 + 0);
+        pos.y() = this->sys_params(i*7 + 1);
+        pos.z() = this->sys_params(i*7 + 2);
+        
+        Eigen::Quaternion<T> qr;
+        qr.w() = this->sys_params(i*7 + 3);
+        qr.x() = this->sys_params(i*7 + 4);
+        qr.y() = this->sys_params(i*7 + 5);
+        qr.z() = this->sys_params(i*7 + 6);
+        qr.normalize();
+        
+        molecules[i].setPos(pos);
+        molecules[i].setRotQ(qr);
+        molecules[i].applyRotationAndTranslation();
+    }
+}
+
+template<>
+Eigen::Vector<autodiff::dual,Eigen::Dynamic>
+System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
+                                             Eigen::Dynamic> &sys_params) {
+    SetSysParams(sys_params);
+    
+    unsigned num_params = sys_params.size();
+    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient;
+    gradient.resize(num_params);
+    
+    auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
+                         this, std::placeholders::_1);
+    
+    for (unsigned i = 0; i < num_params; i++) {
+        gradient[i] = derivative(foo, autodiff::wrt(this->sys_params(i)),
+                                 autodiff::at(this->sys_params));
+    }
+    
+    return gradient;
+}
+
+template<typename T>
+static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
+                const unsigned thread_id, const unsigned num_threads) {
     unsigned n_atoms = atoms_molecules.size();
     
     for (unsigned i = 0; i < n_atoms; i++) {
@@ -636,55 +680,6 @@ void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
             pol_mat(j,i) = mat_elem;
         }
     }
-}
-
-template<typename T>
-void System<T>::SetSysParams(const Eigen::Vector<T,
-                             Eigen::Dynamic> &sys_params) {
-    this->sys_params = sys_params;
-    
-    unsigned n_atoms = molecules.size();
-    for (unsigned i = 0; i < n_atoms; i++) {
-        Eigen::Vector3<T> pos;
-        pos.x() = this->sys_params(i*8 + 0);
-        pos.y() = this->sys_params(i*8 + 1);
-        pos.z() = this->sys_params(i*8 + 2);
-        
-        Eigen::Quaternion<T> qr;
-        qr.w() = this->sys_params(i*8 + 3);
-        qr.x() = this->sys_params(i*8 + 4);
-        qr.y() = this->sys_params(i*8 + 5);
-        qr.z() = this->sys_params(i*8 + 6);
-        
-        // T lrg_mult = this->sys_params(i*8 + 7);
-        
-        molecules[i].setPos(pos);
-        molecules[i].setRotQ(qr);
-        molecules[i].applyRotationAndTranslation();
-    }
-}
-
-template<>
-Eigen::Vector<autodiff::dual,Eigen::Dynamic>
-System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
-                                             Eigen::Dynamic> &sys_params) {
-    if (this->sys_params != sys_params) {
-        SetSysParams(sys_params);
-    }
-    
-    unsigned num_params = sys_params.size();
-    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient;
-    gradient.resize(num_params);
-    
-    auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
-                         this, std::placeholders::_1);
-    
-    for (unsigned i = 0; i < num_params; i++) {
-        gradient[i] = derivative(foo, autodiff::wrt(this->sys_params(i)),
-                                 autodiff::at(this->sys_params));
-    }
-    
-    return gradient;
 }
 
 template<typename T>
@@ -732,7 +727,7 @@ void System<T>::PolarizeMolecules() {
 }
 
 template<typename T>
-void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
+static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
                      Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
                      const unsigned thread_id, const unsigned n_threads) {
     unsigned n_atoms = atoms_molecules.size();
@@ -873,6 +868,70 @@ void System<T>::setXCRule() {
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
         it->second.setXCRule(xc_rule);
     }
+}
+
+static int GeomOptimProgress(void *instance, const lbfgsfloatval_t *x,
+                             const lbfgsfloatval_t *g, const lbfgsfloatval_t fx,
+                             const lbfgsfloatval_t xnorm, 
+                             const lbfgsfloatval_t gnorm,
+                             const lbfgsfloatval_t step, int n, int k, int ls) {
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "Iteration %d:\n", k);
+    std::cout << buffer;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+             "  System Energy : %15.5E", fx);
+    std::cout << buffer << std::endl;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+             "  Gradient Norm : %15.5E", gnorm);
+    std::cout << buffer << std::endl << std::endl;
+    return 0;
+}
+
+static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
+                                         const lbfgsfloatval_t *x,
+                                         lbfgsfloatval_t *g, const int n,
+                                         const lbfgsfloatval_t step) {
+    auto system_instance =
+        static_cast<MolFFSim::System<autodiff::dual>*>(instance);
+        
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_params(n);
+    for (int i = 0; i < n; i++) {
+        aux_params(i) = autodiff::dual(x[i]);
+    }
+    
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_grad =
+        system_instance->GradEnergyFromParams(aux_params);
+    
+    for (int i = 0; i < n; i++) {
+        g[i] = lbfgsfloatval_t(aux_grad(i));
+    }
+    
+    return lbfgsfloatval_t(system_instance->EnergyFromParams(aux_params));
+}
+
+template <>
+int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
+    int N = sys_params.size();
+        
+    int ret = 0;
+    lbfgsfloatval_t fx;
+    lbfgsfloatval_t *x = lbfgs_malloc(N);
+    lbfgs_parameter_t param;
+    
+    for (int i = 0; i < N; i++) {
+        x[i] = lbfgsfloatval_t(sys_params(i));
+    }
+    
+    // Initialize the parameters for the L-BFGS optimization.
+    lbfgs_parameter_init(&param);
+    
+    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
+    lbfgs_free(x);
+    
+    return ret;
 }
 
 template <typename T>

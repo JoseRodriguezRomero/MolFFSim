@@ -77,6 +77,8 @@ int main(int argc, char** argv) {
                 Eigen::Dynamic> sys_params = system.SysParams();
             
             system.PolarizeMolecules();
+            system.OptimizeGeometry(std::cout);
+            
             std::cout << system << std::endl;;
             
             snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",

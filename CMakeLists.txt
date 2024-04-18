@@ -71,6 +71,9 @@ target_link_libraries(MolFFSim PRIVATE ${EIGEN_LIBRARIES})
 # Link the autodiff library
 target_link_libraries(MolFFSim PRIVATE ${AUTODIFF_LIBRARIES})
 
+# Link the liblbfgs library
+target_link_libraries(MolFFSim PRIVATE ${LBFGS_LIBRARIES})
+
 # Install MolFFSim
 install(
     TARGETS MolFFSim

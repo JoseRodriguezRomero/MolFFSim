@@ -2,6 +2,7 @@
 #define CLASS_MOLECULES_SYSTEM
 
 #include <stdio.h>
+#include <lbfgs.h>
 
 #include <cmath>
 #include <thread>
@@ -71,9 +72,9 @@ public:
     
     // A vector with 8*N entries, where N is the number of molecules in the
     // system. The first three entries are the displacement vector, the
-    // next four are the components of the rotaiton quaternion, and the last
-    // entry, that corresponds to each molecule, is a Lagrange multiplier to
-    // garantee that the quaternion rotation matrix is unitary.
+    // next four are the components of the rotaiton quaternion. The last
+    // entry per molecule is a Lagrange multiplier to make the quaternions
+    // normal and avoif singularies.
     inline Eigen::Vector<T,Eigen::Dynamic> SysParams() const {
         return sys_params;
     }
@@ -83,7 +84,18 @@ public:
     inline T
     EnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params) {
         SetSysParams(sys_params);
-        return SystemEnergy();
+        
+        T energy = SystemEnergy();
+        for (unsigned i = 0; i < molecules.size(); i++) {
+            T aux_sum = -1.0;
+            aux_sum += pow(sys_params(i*7 + 3),2);
+            aux_sum += pow(sys_params(i*7 + 4),2);
+            aux_sum += pow(sys_params(i*7 + 5),2);
+            aux_sum += pow(sys_params(i*7 + 6),2);
+            energy += pow(aux_sum,2);
+        }
+        
+        return energy;
     }
     
     Eigen::Vector<T,Eigen::Dynamic> 
@@ -114,7 +126,8 @@ public:
     void setECP();
     void setFullE();
     void setXCRule();
-        
+    
+    int OptimizeGeometry(std::ostream &os = std::cout);
 };
 
 }

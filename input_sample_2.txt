@@ -1,5 +1,5 @@
 system_charge        0
-is_periodic          true true false
+is_periodic          false false false
 periodic_box_sizes   300 300 300
 atomic_basis         ecp_collection_1
 xc_coefficients      ecp_collection_1
@@ -18,8 +18,7 @@ END MOLECULE
 END MOLECULE_LIST
 
 BEGIN MOLECULAR_SYSTEM
-H2O     PRINT         EULER_XYZ       0.0000000000      0.0000000000      0.0000000000      0.0000000000      0.0000000000      0.0000000000
-H2O     PRINT         EULER_XYZ       0.0000000000      1.5000000000      0.0000000000      0.0000000000      0.0000000000    180.0000000000
-H2O     PRINT         EULER_XYZ       0.0000000000   -200.5000000000      0.0000000000      0.0000000000      0.0000000000    180.0000000000
+H2O     PRINT         EULER_XYZ       0.0000000000      0.0000000000      0.0000000000      0.0000000000      0.0000000000     90.0000000000
+H2O     PRINT         EULER_XYZ       0.0000000000      2.5000000000      0.0000000000      0.0000000000     45.0000000000      0.0000000000
 END MOLECULAR_SYSTEM
 
