@@ -19,7 +19,7 @@ template<typename T>
 System<T>::System() {
     is_periodic = DEFAULT_IS_PERIODIC;
     box_side_len = DEFAULT_PERIODIC_SIZES;
-    system_sum_charges = 0;
+    system_charge = 0;
 }
 
 template<typename T>
@@ -38,14 +38,13 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
     elem_c_coeff.clear();
     elem_lambda_coeff.clear();
     elem_xc_coeff.clear();
-    system_sum_charges = 0;
+    system_charge = 0;
     sys_params.resize(0);
     
     std::string line;
     while (std::getline(input_file, line)) {
         if (line.find("system_charge") != std::string::npos) {
             char dummy[64];
-            unsigned system_charge;
             int valid_args = sscanf(line.c_str(),"%s %ud", dummy,
                                     &system_charge);
             
@@ -54,8 +53,6 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                 std::cout << std::endl;
                 exit(1);
             }
-            
-            setSystemCharge(system_charge);
         }
         else if (line.find("is_periodic") != std::string::npos) {
             char dummy[64];
@@ -554,21 +551,6 @@ void System<T>::readAtomicBasisSet(const std::string &atom_basis_collection) {
 }
 
 template<typename T>
-void System<T>::setSystemCharge(const unsigned charge) {
-    system_sum_charges = charge;
-    
-    auto it1_end = molecules.end();
-    auto it1_begin = molecules.begin();
-    for (auto it1 = it1_begin; it1 != it1_end; it1++) {
-        auto it2_end = it1->Atoms().end();
-        auto it2_begin = it1->Atoms().begin();
-        for (auto it2 = it2_begin; it2 != it2_end; it2++) {
-            system_sum_charges -= it2->EffAtomicNumber();
-        }
-    }
-}
-
-template<typename T>
 void System<T>::setPeriodic(const std::vector<bool> &is_periodic) {
     this->is_periodic = is_periodic;
     
@@ -710,6 +692,7 @@ void System<T>::PolarizeMolecules() {
     }
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
+    vec_mat(n_atoms) += system_charge;
     
 #ifdef _OPENMP
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
@@ -874,19 +857,22 @@ static int GeomOptimProgress(void *instance, const lbfgsfloatval_t *x,
                              const lbfgsfloatval_t *g, const lbfgsfloatval_t fx,
                              const lbfgsfloatval_t xnorm, 
                              const lbfgsfloatval_t gnorm,
-                             const lbfgsfloatval_t step, int n, int k, int ls) {
+                             const lbfgsfloatval_t step, int n, int k,
+                             int ls) {
+    auto system_instance =
+        static_cast<MolFFSim::System<autodiff::dual>*>(instance);
     char buffer[MAX_PRINT_BUFFER_SIZE];
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "Iteration %d:\n", k);
-    std::cout << buffer;
+    system_instance->OStream() << buffer;
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
-             "  System Energy : %15.5E", fx);
-    std::cout << buffer << std::endl;
+             "  System Energy : %15.5E [Hartree]", fx);
+    system_instance->OStream() << buffer << std::endl;
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
              "  Gradient Norm : %15.5E", gnorm);
-    std::cout << buffer << std::endl << std::endl;
+    system_instance->OStream() << buffer << std::endl << std::endl;
     return 0;
 }
 
@@ -924,10 +910,11 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     for (int i = 0; i < N; i++) {
         x[i] = lbfgsfloatval_t(sys_params(i));
     }
-    
+                                 
     // Initialize the parameters for the L-BFGS optimization.
     lbfgs_parameter_init(&param);
     
+    output_stream = &os;
     ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
     lbfgs_free(x);
     

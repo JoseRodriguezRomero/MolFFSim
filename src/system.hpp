@@ -54,10 +54,12 @@ private:
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
     
-    unsigned system_sum_charges;
+    unsigned system_charge;
     
     Eigen::Vector<T,Eigen::Dynamic> sys_params;
     const std::thread::id t_id = std::this_thread::get_id();
+    
+    std::ostream *output_stream;
     
 public:
     System();
@@ -116,7 +118,6 @@ public:
     void MonomerPolarizeMolecules();
     void getMonomerEnergies();
     
-    void setSystemCharge(const unsigned charge);
     void setPeriodic(const std::vector<bool> &is_periodic);
     void setPeriodicBoxSizes(const std::vector<double> box_side_len);
     
@@ -128,6 +129,7 @@ public:
     void setXCRule();
     
     int OptimizeGeometry(std::ostream &os = std::cout);
+    inline std::ostream& OStream() { return *output_stream; }
 };
 
 }
