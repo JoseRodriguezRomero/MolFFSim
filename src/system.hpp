@@ -72,11 +72,9 @@ public:
     
     void ReadInputFile(std::ifstream &input_file);
     
-    // A vector with 8*N entries, where N is the number of molecules in the
+    // A vector with 7*N entries, where N is the number of molecules in the
     // system. The first three entries are the displacement vector, the
-    // next four are the components of the rotaiton quaternion. The last
-    // entry per molecule is a Lagrange multiplier to make the quaternions
-    // normal and avoif singularies.
+    // next four are the components of the rotaiton quaternion.
     inline Eigen::Vector<T,Eigen::Dynamic> SysParams() const {
         return sys_params;
     }
