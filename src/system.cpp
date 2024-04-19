@@ -676,6 +676,9 @@ void System<T>::PolarizeMolecules() {
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
         aux_vec_mat(n_atoms+1, n_threads);
     
+    pol_mat.setZero();
+    aux_vec_mat.setZero();
+    
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]  =
             new std::thread(std::bind(&matThreadPol<T>, &atoms_molecules,
