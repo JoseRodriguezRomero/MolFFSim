@@ -29,7 +29,15 @@ jobs:
               run: brew install pybind11
               
             - name: install-eigen3
-              run: brew install eigen
+              run: |
+                git clone https://gitlab.com/libeigen/eigen.git
+                cd eigen
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm -rf eigen
             
             - name: install-autodiff
               run: brew install autodiff
