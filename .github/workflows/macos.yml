@@ -71,5 +71,4 @@ jobs:
                 
             - name: run-sample-calculation
               run: |
-                MolFFSim ../input_sample_2.txt
-
+                MolFFSim input_sample_2.txt

@@ -5,30 +5,34 @@ project(MolFFSim LANGUAGES CXX)
 
 # Set C++ compiler (replace "g++" with your desired compiler)
 set(CMAKE_CXX_COMPILER g++)
-    
-if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Xpreprocessor -fopenmp")
-    set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp")
-    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
-    set(OpenMP_EXE_LINKER_FLAGS "-lomp")
-    set(OpenMP_INCLUDE_DIRS "/opt/homebrew/opt/libomp/include")
-    set(OpenMP_LIBRARIES "/opt/homebrew/opt/libomp/lib/libomp.dylib")
-else()
-    # Check if OpenMP is available
-    find_package(OpenMP REQUIRED)
 
+if(APPLE)
+    include_directories(/opt/homebrew/include)
+    link_directories(/opt/homebrew/lib)
+    set(OpenMP_C_FLAGS "${CMAKE_C_FLAGS} -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
+    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
+    set(OpenMP_EXE_LINKER_FLAGS "-L/opt/homebrew/lib/libomp.dylib")
+else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fopenmp")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif() 
+    
+    # Check if OpenMP is available
+    find_package(OpenMP REQUIRED)
+endif()
 
 # Set C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Find Eigen library
-find_package (Eigen3 3.3 NO_MODULE)
+if(APPLE)
+    # Find Eigen library
+    find_package (Eigen3 REQUIRED)
+else()
+    # Find Eigen library
+    find_package (Eigen3 3.3 NO_MODULE)
+endif()
 
 # Find autodiff library
 find_package(autodiff REQUIRED)
@@ -51,14 +55,6 @@ include_directories(${LBFGS_INCLUDE_DIRS})
 # Add an executable target
 file(GLOB SOURCES "src/*.cpp" "src/*.hpp")
 add_executable(MolFFSim ${SOURCES})
-
-# Add link with OpenMP
-if(OpenMP_FOUND)
-    target_link_libraries(MolFFSim PRIVATE OpenMP::OpenMP_CXX)
-else()
-    target_include_directories(MolFFSim PRIVATE ${OpenMP_INCLUDE_DIRS})
-    target_link_libraries(MolFFSim PRIVATE ${OpenMP_LIBRARIES})
-endif()
 
 # Link the eigen library
 target_link_libraries(MolFFSim ${EIGEN3_LIBRARIES})
