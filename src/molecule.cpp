@@ -779,7 +779,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
     auto it_begin = molec.const_AtomsRotAndTrans().cbegin();
     for (auto it = it_begin; it != it_end; it++) {
         snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
-                 "%8s %25.8lf %25.8lf %25.8lf %25.8lf",
+                 "%8s %25.5lf %25.5lf %25.5lf %25.5lf",
                  LabelFromAtomicNumber(it->AtomicNumber()).c_str(),
                  double(it->Pos().x())*BOHR_TO_ANGSTROM,
                  double(it->Pos().y())*BOHR_TO_ANGSTROM,

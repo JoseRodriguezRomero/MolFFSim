@@ -1,0 +1,44 @@
+name: macOS
+
+on:
+    jobs:
+        runs-on: macOS-latest
+        steps:
+            - name: install-cmake
+            - run: |
+                brew install cmake
+            - name: install-openmp
+            - run: |
+                brew install libomp
+            - name: install-eigen3
+            - run: |
+                cd ${{ github.workspace }}
+                git clone https://gitlab.com/libeigen/eigen.git
+                cd eigen
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm -rf eigen
+            - name: install-autodiff
+            - run: |
+                cd ${{ github.workspace }}
+                git clone https://github.com/autodiff/autodiff.git
+                cd autodiff
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                sudo rm -rf autodiff
+            - name: install-liblbfgs
+            - run: |
+                cd ${{ github.workspace }}
+                git clone https://github.com/chokkan/liblbfgs.git
+                cd liblbfgs
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm -rf liblbfgs

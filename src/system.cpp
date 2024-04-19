@@ -918,6 +918,9 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
     lbfgs_free(x);
     
+    os << "System geometry optimization done!" << std::endl;
+    os << std::endl << std::endl;
+    
     return ret;
 }
 
@@ -973,7 +976,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
     os << std::endl;
     
     for (std::string molec_name : system.ListMoleculeTypes()) {
-        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%25s %25u %35.5E", 
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%25s %25u %35.5E",
                  molec_name.c_str(), system.MoleculeInstances(molec_name),
                  (system.MoleculeMonomerEnergy(molec_name))*HARTREE_TO_KJ_MOL);
         os << buffer << std::endl;
