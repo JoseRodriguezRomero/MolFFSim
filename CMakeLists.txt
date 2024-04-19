@@ -36,7 +36,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Find Eigen library
-find_package(eigen3 REQUIRED)
+find_package (Eigen3 3.3 NO_MODULE)
 
 # Find autodiff library
 find_package(autodiff REQUIRED)
@@ -48,7 +48,7 @@ find_package(lbfgs REQUIRED)
 include_directories(/usr/local/include)
 
 # Include eigen3 headers
-include_directories(${EIGEN_INCLUDE_DIRS})
+include_directories(${EIGEN3_INCLUDE_DIRS})
 
 # Include directories for autodiff
 include_directories(${AUTODIFF_INCLUDE_DIRS})
@@ -66,7 +66,7 @@ else()
 endif()
 
 # Link the eigen library
-target_link_libraries(MolFFSim PRIVATE ${EIGEN_LIBRARIES})
+target_link_libraries(MolFFSim ${EIGEN3_LIBRARIES})
 
 # Link the autodiff library
 target_link_libraries(MolFFSim PRIVATE ${AUTODIFF_LIBRARIES})
