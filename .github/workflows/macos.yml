@@ -12,7 +12,6 @@ jobs:
         steps:
             - name: dummy
               run: |
-                mkdir .build && cd .build
                 cmake ..
             - name: install-cmake
               run: |
