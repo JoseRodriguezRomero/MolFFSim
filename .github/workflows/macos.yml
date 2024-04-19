@@ -40,7 +40,6 @@ jobs:
                 cd autodiff
                 mkdir .build && cd .build
                 cmake ..
-                make
                 sudo cmake --build . --target install
                 cd ../..
                 sudo rm -rf autodiff
