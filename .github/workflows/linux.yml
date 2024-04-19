@@ -1,0 +1,75 @@
+name: macos
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *"
+jobs:
+    build:
+        name: build-and-install
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+              
+            - name: install-cmake
+              run: sudo apt install cmake
+              
+            - name: install-git
+              run: sudo apt install git
+              
+            - name: install-openmp
+              run: sudo apt install libomp libomp-dev
+              
+            - name: install-catch2
+              run: sudo apt install catch2
+                                        
+            - name: install-eigen3
+              run: |
+                wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+                tar -xf eigen-3.4.0.tar.gz
+                cd eigen-3.4.0
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm eigen-3.4.0.tar.gz
+                rm -rf eigen-3.4.0
+            
+            - name: install-autodiff
+              run: |
+                wget https://github.com/autodiff/autodiff/archive/refs/tags/v1.1.2.tar.gz
+                tar -xf v1.1.2.tar.gz
+                cd autodiff-1.1.2
+                mkdir .build && cd .build
+                cmake .. -DAUTODIFF_BUILD_PYTHON=OFF
+                make
+                sudo make install
+                cd ../..
+                rm v1.1.2.tar.gz
+                sudo rm -rf autodiff-1.1.2
+            
+            - name: install-liblbfgs
+              run: |
+                git clone https://github.com/chokkan/liblbfgs.git
+                cd liblbfgs
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm -rf liblbfgs
+                
+            - name: compile-and-install
+              run: |
+                mkdir build && cd build
+                cmake ..
+                make
+                sudo make install
+                
+            - name: run-sample-calculation
+              run: |
+                MolFFSim ../input_sample_2.txt
+
