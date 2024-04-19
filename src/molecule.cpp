@@ -690,6 +690,9 @@ void Molecule<T>::Polarize() {
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
     Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
     
+    pol_mat.setZero();
+    vec_mat.setZero();
+    
     for (unsigned i = 0; i < n_atoms; i++) {
         T mat_elem(0.0);
         T vec_elem(0.0);
