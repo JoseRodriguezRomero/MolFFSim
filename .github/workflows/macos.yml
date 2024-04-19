@@ -11,13 +11,13 @@ on:
             runs-on: macOS-latest
             steps:
                 - name: install-cmake
-                - run: |
+                  run: |
                     brew install cmake
                 - name: install-openmp
-                - run: |
+                  run: |
                     brew install libomp
                 - name: install-eigen3
-                - run: |
+                  run: |
                     cd ${{ github.workspace }}
                     git clone https://gitlab.com/libeigen/eigen.git
                     cd eigen
@@ -28,7 +28,7 @@ on:
                     cd ../..
                     rm -rf eigen
                 - name: install-autodiff
-                - run: |
+                  run: |
                     cd ${{ github.workspace }}
                     git clone https://github.com/autodiff/autodiff.git
                     cd autodiff
@@ -39,7 +39,7 @@ on:
                     cd ../..
                     sudo rm -rf autodiff
                 - name: install-liblbfgs
-                - run: |
+                  run: |
                     cd ${{ github.workspace }}
                     git clone https://github.com/chokkan/liblbfgs.git
                     cd liblbfgs
