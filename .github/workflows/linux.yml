@@ -36,17 +36,7 @@ jobs:
                 rm -rf Catch2-3.5.4
                                         
             - name: install-eigen3
-              run: |
-                wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-                tar -xf eigen-3.4.0.tar.gz
-                cd eigen-3.4.0
-                mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                rm eigen-3.4.0.tar.gz
-                rm -rf eigen-3.4.0
+              run: sudo apt install libeigen3-dev
             
             - name: install-autodiff
               run: |
