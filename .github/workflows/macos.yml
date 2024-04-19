@@ -27,6 +27,9 @@ jobs:
               
             - name: install-pybind11
               run: brew install pybind11
+            
+            - name: install-python-setuptools
+              run: brew install python-setuptools
               
             - name: install-eigen3
               run: |
@@ -38,18 +41,21 @@ jobs:
                 make
                 sudo make install
                 cd ../..
+                rm eigen-3.4.0.tar.gz
                 rm -rf eigen-3.4.0
             
             - name: install-autodiff
               run: |
-                git clone https://github.com/autodiff/autodiff.git
-                cd autodiff
+                wget https://github.com/autodiff/autodiff/archive/refs/tags/v1.1.2.tar.gz
+                tar -xf v1.1.2.tar.gz
+                cd autodiff-1.1.2
                 mkdir .build && cd .build
                 cmake ..
                 make
                 sudo make install
                 cd ../..
-                sudo rm -rf autodiff
+                rm v1.1.2.tar.gz
+                sudo rm -rf autodiff-1.1.2
             
             - name: install-liblbfgs
               run: |
