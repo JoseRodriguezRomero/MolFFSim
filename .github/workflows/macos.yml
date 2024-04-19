@@ -1,4 +1,9 @@
-name: osx
+name: macOS
+
+on:
+    push:
+        branches:
+            - main
 
 on:
     jobs:
