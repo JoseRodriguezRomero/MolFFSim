@@ -11,8 +11,7 @@ jobs:
         runs-on: macos-latest
         steps:
             - name: dummy
-              run: |
-                ls ${{ github.workspace }}
+              run: ls ${{ source-dir }}
             - name: install-cmake
               run: |
                 brew install cmake
