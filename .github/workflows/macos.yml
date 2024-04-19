@@ -10,9 +10,10 @@ jobs:
         name: build-and-install
         runs-on: macos-latest
         steps:
-            - uses: actions/checkout@v4
             - name: dummy
+              uses: actions/checkout@v2
               run: |
+                cd ${{build-dir}}
                 cmake ..
             - name: install-cmake
               run: |
