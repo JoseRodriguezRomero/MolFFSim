@@ -19,6 +19,9 @@ jobs:
             - name: install-catch2
               run: |
                 brew install catch2
+            - name: install-pybind11
+              run: |
+                brew install pybind11
             - name: install-eigen3
               run: |
                 cd ${{ github.workspace }}
