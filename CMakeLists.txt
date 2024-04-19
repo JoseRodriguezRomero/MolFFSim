@@ -19,21 +19,16 @@ if(APPLE)
     set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
     set(OpenMP_EXE_LINKER_FLAGS "-L/opt/homebrew/lib/libomp.dylib")
 else()
+    # Check if OpenMP is available
+    find_package(OpenMP REQUIRED)
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fopenmp ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-    
-    # Check if OpenMP is available
-    find_package(OpenMP REQUIRED)
 endif()
 
-if(APPLE)
-    # Find Eigen library
-    find_package (Eigen3 REQUIRED)
-else()
-    # Find Eigen library
-    find_package (Eigen3 3.3 NO_MODULE)
-endif()
+# Find Eigen library
+find_package (Eigen3 REQUIRED)
 
 # Find autodiff library
 find_package(autodiff REQUIRED)
