@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 project(MolFFSim LANGUAGES CXX)
 
 # Set C++ compiler (replace "g++" with your desired compiler)
-set(CMAKE_C_COMPILER /opt/homebrew/bin/g++-13)
-set(CMAKE_CXX_COMPILER /opt/homebrew/bin/g++-13)
+set(CMAKE_C_COMPILER gcc)
+set(CMAKE_CXX_COMPILER g++)
 
 # Set C++ standard to C++17
 set(CMAKE_C_STANDARD 17)
