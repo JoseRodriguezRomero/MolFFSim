@@ -5,30 +5,22 @@ project(MolFFSim LANGUAGES CXX)
 
 # Set C++ compiler (replace "g++" with your desired compiler)
 set(CMAKE_CXX_COMPILER g++)
-
-# Check if OpenMP is available
-find_package(OpenMP)
-
-if(OpenMP_FOUND)
-    message(STATUS "OpenMP is available.")
-    # Add compiler flags for OpenMP
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-else()
-    # If OpenMP is not found, manually specify the location
-    # of OpenMP include and library directories
+    
+if(APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Xpreprocessor -fopenmp")
     set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp")
     set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp")
     set(OpenMP_EXE_LINKER_FLAGS "-lomp")
     set(OpenMP_INCLUDE_DIRS "/opt/homebrew/opt/libomp/include")
     set(OpenMP_LIBRARIES "/opt/homebrew/opt/libomp/lib/libomp.dylib")
-endif()
-
-if(APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Xpreprocessor -fopenmp")
 else()
+    # Check if OpenMP is available
+    find_package(OpenMP REQUIRED)
+
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fopenmp")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif() 
 
 # Set C++ standard to C++17
@@ -42,7 +34,7 @@ find_package (Eigen3 3.3 NO_MODULE)
 find_package(autodiff REQUIRED)
 
 # Find liblbfgs library
-find_package(lbfgs REQUIRED)
+find_package(LBFGS REQUIRED)
 
 # Add /usr/local/include to the list of include directories
 include_directories(/usr/local/include)
@@ -50,8 +42,11 @@ include_directories(/usr/local/include)
 # Include eigen3 headers
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-# Include directories for autodiff
+# Include autodiff headers
 include_directories(${AUTODIFF_INCLUDE_DIRS})
+
+# Include lbfgs headers
+include_directories(${LBFGS_INCLUDE_DIRS})
 
 # Add an executable target
 file(GLOB SOURCES "src/*.cpp" "src/*.hpp")
@@ -95,4 +90,3 @@ install(
     FILES ${xc_coefficients}
     DESTINATION /usr/local/share/MolFFSim/XC_COEFFICIENTS/
 )
-
