@@ -6,25 +6,26 @@ project(MolFFSim LANGUAGES CXX)
 # Set C++ compiler (replace "g++" with your desired compiler)
 set(CMAKE_CXX_COMPILER g++)
 
+# Set C++ standard to C++17
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if(APPLE)
     include_directories(/opt/homebrew/include)
     link_directories(/opt/homebrew/lib)
     set(OpenMP_C_FLAGS "${CMAKE_C_FLAGS} -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
-    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
+    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -Xpreprocessor -fopenmp /opt/local/lib/libomp.dylib -I/opt/local/include")
     set(OpenMP_EXE_LINKER_FLAGS "-L/opt/homebrew/lib/libomp.dylib")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fopenmp")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fopenmp ${OpenMP_CXX_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
     
     # Check if OpenMP is available
     find_package(OpenMP REQUIRED)
 endif()
-
-# Set C++ standard to C++17
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 if(APPLE)
     # Find Eigen library
