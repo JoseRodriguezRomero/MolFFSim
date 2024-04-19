@@ -30,7 +30,7 @@ jobs:
             
             - name: install-python-setuptools
               run: |
-                brew install setuptools
+                brew install python-setuptools
                 pip install setuptools
                 conda install setuptools
               
