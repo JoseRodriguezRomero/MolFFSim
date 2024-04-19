@@ -38,7 +38,7 @@ jobs:
                 brew install liblbfgs
             - name: compile-and-install
               run: |
-                cd MolFFSim
+                mkdir build && cd build
                 cmake ..
                 make
                 sudo make install
