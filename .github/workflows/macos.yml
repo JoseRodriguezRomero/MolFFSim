@@ -33,6 +33,7 @@ jobs:
                 brew install liblbfgs
             - name: compile-and-install
               run: |
+                cd ${{ github.workspace }}
                 mkdir build && cd build
                 cmake ..
                 make
