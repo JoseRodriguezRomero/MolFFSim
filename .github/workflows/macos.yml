@@ -68,4 +68,8 @@ jobs:
                 cmake ..
                 make
                 sudo make install
+                
+            - name: run-sample-calculation
+              run: |
+                MolFFSim ../input_sample_2.txt
 

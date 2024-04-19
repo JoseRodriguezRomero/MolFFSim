@@ -7,7 +7,7 @@ project(MolFFSim LANGUAGES CXX)
 set(CMAKE_CXX_COMPILER g++)
 
 # Check if OpenMP is available
-find_package(OpenMP REQUIRED)
+find_package(OpenMP)
 
 if(OpenMP_FOUND)
     message(STATUS "OpenMP is available.")
