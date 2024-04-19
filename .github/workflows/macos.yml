@@ -30,14 +30,15 @@ jobs:
               
             - name: install-eigen3
               run: |
-                git clone https://gitlab.com/libeigen/eigen.git
-                cd eigen
+                wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+                tar -xf eigen-3.4.0.tar.gz
+                cd eigen-3.4.0
                 mkdir .build && cd .build
                 cmake ..
                 make
                 sudo make install
                 cd ../..
-                rm -rf eigen
+                rm -rf eigen-3.4.0
             
             - name: install-autodiff
               run: |
