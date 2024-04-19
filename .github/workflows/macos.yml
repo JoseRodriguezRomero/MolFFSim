@@ -39,8 +39,9 @@ jobs:
                 git clone https://github.com/autodiff/autodiff.git
                 cd autodiff
                 mkdir .build && cd .build
-                cmake ..
-                sudo cmake --build . --target install
+                cmake .. -DENABLE_PRECOMPILED_HEADERS=OFF
+                make
+                sudo make install
                 cd ../..
                 sudo rm -rf autodiff
             - name: install-liblbfgs
