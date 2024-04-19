@@ -24,34 +24,11 @@ jobs:
                 brew install pybind11
             - name: install-eigen3
               run: |
-                cd ${{ github.workspace }}
-                git clone https://gitlab.com/libeigen/eigen.git
-                cd eigen
-                mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                rm -rf eigen
+                brew install eigen
             - name: install-autodiff
               run: |
-                cd ${{ github.workspace }}
-                git clone https://github.com/autodiff/autodiff.git
-                cd autodiff
-                mkdir .build && cd .build
-                cmake .. -DENABLE_PRECOMPILED_HEADERS=OFF
-                make
-                sudo make install
-                cd ../..
-                sudo rm -rf autodiff
+                brew install autodiff
             - name: install-liblbfgs
               run: |
-                cd ${{ github.workspace }}
-                git clone https://github.com/chokkan/liblbfgs.git
-                cd liblbfgs
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                rm -rf liblbfgs
+                brew install liblbfgs
 
