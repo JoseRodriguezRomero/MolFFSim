@@ -7,7 +7,7 @@ on:
     - cron: "0 0 * * *"
 jobs:
     build:
-        name: build and install
+        name: build-and-install
         runs-on: macos-latest
         steps:
             - name: install-cmake
@@ -31,4 +31,10 @@ jobs:
             - name: install-liblbfgs
               run: |
                 brew install liblbfgs
+            - name: compile-and-install
+              run: |
+                mkdir build && cd build
+                cmake ..
+                make
+                sudo make install
 
