@@ -4,11 +4,18 @@
 #include <fstream>
 #include <iostream>
 
+#include "omp.h"
+
+#include <Eigen/Core>
 #include <autodiff/forward/dual.hpp>
 
 #include "system.hpp"
 
 int main(int argc, char** argv) {
+    int n = std::thread::hardware_concurrency();
+    omp_set_num_threads(n);
+    Eigen::setNbThreads(n);
+    
     // True if a single-point energy calculation is to be made.
     bool point_energy = true;
     

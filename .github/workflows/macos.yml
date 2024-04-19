@@ -20,7 +20,9 @@ jobs:
               run: brew install git
               
             - name: install-openmp
-              run: brew install libomp
+              run: |
+                brew install libomp
+                brew unlink libomp && brew link --force libomp
               
             - name: install-catch2
               run: brew install catch2
