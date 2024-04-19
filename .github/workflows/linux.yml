@@ -20,7 +20,7 @@ jobs:
               run: sudo apt install git
               
             - name: install-openmp
-              run: sudo apt install libomp libomp-dev
+              run: sudo apt install libomp-dev
               
             - name: install-catch2
               run: sudo apt install catch2
