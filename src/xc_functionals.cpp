@@ -251,7 +251,7 @@ T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
     // T aux_c = sqrt(lambda) /  (exp(lambda*dist_pows[2]) * M_PI_SQRT);
     T aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) /  M_PI_SQRT;
     
-    T xc_energy = 0;
+    T xc_energy = T(0.0);
     xc_energy -= XCEnergy1(lambda_pows, dist_pows) / FACTORIAL_2;
     xc_energy += XCEnergy2(lambda_pows, dist_pows) / FACTORIAL_4;
     xc_energy -= XCEnergy3(lambda_pows, dist_pows) / FACTORIAL_6;
@@ -291,7 +291,7 @@ T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
     // T aux_c = sqrt(lambda) /  (exp(lambda*dist_pows[2]) * M_PI_SQRT);
     T aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) /  M_PI_SQRT;
     
-    T xc_energy = 0;
+    T xc_energy = T(0.0);
     xc_energy += XCEnergyD1(lambda_pows, dist_pows) / FACTORIAL_3;
     xc_energy -= XCEnergyD2(lambda_pows, dist_pows) / FACTORIAL_5;
     xc_energy += XCEnergyD3(lambda_pows, dist_pows) / FACTORIAL_7;

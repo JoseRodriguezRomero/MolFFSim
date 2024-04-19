@@ -615,9 +615,9 @@ System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
 }
 
 template<typename T>
-static void matThreadPol(const std::vector<Atom<T>*> *atoms_molecules,
-                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *pol_mat,
-                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> *vec_mat,
+static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
                 const unsigned thread_id, const unsigned num_threads) {
     unsigned n_atoms = atoms_molecules->size();
     
@@ -681,18 +681,16 @@ void System<T>::PolarizeMolecules() {
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]  =
-            new std::thread(std::bind(&matThreadPol<T>, &atoms_molecules,
-                                      &pol_mat, &aux_vec_mat, i, n_threads));
+            new std::thread(std::bind(&matThreadPol<T>,
+            std::cref(atoms_molecules), std::ref(pol_mat),
+            std::ref(aux_vec_mat), i, n_threads));
     }
     
-    matThreadPol(&atoms_molecules, &pol_mat, &aux_vec_mat,
-                 n_threads - 1, n_threads);
+    matThreadPol(atoms_molecules, pol_mat, aux_vec_mat, n_threads - 1,
+                 n_threads);
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]->join();
-    }
-    
-    for (unsigned i = 0; i < n_threads - 1; i++) {
         delete calc_threads[i];
     }
         
