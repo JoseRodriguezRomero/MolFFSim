@@ -688,21 +688,27 @@ void System<T>::PolarizeMolecules() {
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]->join();
+    }
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
         delete calc_threads[i];
     }
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
     
-#ifdef _OPENMP
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    Eigen::PartialPivLU<Eigen::Matrix<T,
-        Eigen::Dynamic,Eigen::Dynamic>> lu_decomp(pol_mat);
-    pol_coeffs = lu_decomp.solve(vec_mat);
-#else
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     pol_coeffs = pol_mat.ldlt().solve(vec_mat);
-#endif
+    
+//#ifdef _OPENMP
+//    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+//    Eigen::PartialPivLU<Eigen::Matrix<T,
+//        Eigen::Dynamic,Eigen::Dynamic>> lu_decomp(pol_mat);
+//    pol_coeffs = lu_decomp.solve(vec_mat);
+//#else
+//    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
+//    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+//#endif
     
     for (unsigned i = 0; i < n_atoms; i++) {
         atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
