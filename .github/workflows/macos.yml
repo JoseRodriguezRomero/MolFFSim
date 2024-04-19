@@ -16,6 +16,9 @@ jobs:
             - name: install-openmp
               run: |
                 brew install libomp
+            - name: install-catch2
+              run: |
+                brew install catch2
             - name: install-eigen3
               run: |
                 cd ${{ github.workspace }}
