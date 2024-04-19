@@ -31,7 +31,7 @@ jobs:
             - name: install-python-setuptools
               run: brew install setuptools
               run: pip install setuptools
-              run: conda install setuptools -y
+              run: conda install setuptools 
               
             - name: install-eigen3
               run: |
