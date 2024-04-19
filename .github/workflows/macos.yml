@@ -53,9 +53,8 @@ jobs:
                 tar -xf v1.1.2.tar.gz
                 cd autodiff-1.1.2
                 mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
+                /opt/homebrew/bin/cmake ..
+                sudo /opt/homebrew/bin/cmake --build . --target install
                 cd ../..
                 rm v1.1.2.tar.gz
                 sudo rm -rf autodiff-1.1.2
