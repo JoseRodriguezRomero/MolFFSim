@@ -4,8 +4,8 @@ on:
     push:
         branches:
             - main
-
-on:
+    schedule:
+        - cron: "0 0 * * *"
     jobs:
         build:
             runs-on: macOS-latest
