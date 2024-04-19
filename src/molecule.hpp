@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <unordered_map>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
