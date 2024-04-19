@@ -43,7 +43,7 @@ jobs:
               run: |
                 git clone https://github.com/autodiff/autodiff.git
                 cd autodiff
-                mkdir .build && .build
+                mkdir .build && cd .build
                 cmake ..
                 make
                 sudo make install
