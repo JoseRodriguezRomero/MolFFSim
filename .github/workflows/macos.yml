@@ -41,7 +41,7 @@ jobs:
                 mkdir .build && cd .build
                 cmake ..
                 make
-                sudo make install
+                sudo cmake --build . --target install
                 cd ../..
                 sudo rm -rf autodiff
             - name: install-liblbfgs
