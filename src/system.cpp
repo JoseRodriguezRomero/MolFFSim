@@ -619,7 +619,7 @@ static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
                 const unsigned thread_id, const unsigned num_threads) {
-    unsigned n_atoms = atoms_molecules->size();
+    unsigned n_atoms = atoms_molecules.size();
     
     for (unsigned i = 0; i < n_atoms; i++) {
         if (thread_id != (i % num_threads)) {
@@ -628,38 +628,39 @@ static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
         
         T mat_elem(0.0);
         T vec_elem(0.0);
-        const Atom<T> *atom_i = (*atoms_molecules)[i];
-        atom_i->PolMatSelf(mat_elem, vec_elem);
         
-        (*pol_mat)(i,i) = mat_elem;
-        (*vec_mat)(i,thread_id) += vec_elem;
+        auto atom_i = atoms_molecules.cbegin() + i;
+        (*atom_i)->PolMatSelf(mat_elem, vec_elem);
         
-        (*pol_mat)(i,n_atoms) =
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*pol_mat)(n_atoms,i) =
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        (*vec_mat)(n_atoms,thread_id) +=
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        pol_mat(i,i) = mat_elem;
+        vec_mat(i,thread_id) += vec_elem;
+        
+        pol_mat(i,n_atoms) =
+            ECPEffectiveAtomicNumber((*atom_i)->AtomicNumber());
+        pol_mat(n_atoms,i) =
+            ECPEffectiveAtomicNumber((*atom_i)->AtomicNumber());
+        vec_mat(n_atoms,thread_id) +=
+            ECPEffectiveAtomicNumber((*atom_i)->AtomicNumber());
     }
     
     for (unsigned i = 0; i < n_atoms; i++) {
-        const Atom<T> *atom_i = (*atoms_molecules)[i];
+        auto atom_i = atoms_molecules.cbegin() + i;
         for (unsigned j = i + 1; j < n_atoms; j++) {
             if (thread_id != ((i*n_atoms + j) % num_threads)) {
                 continue;
             }
             
-            const Atom<T> *atom_j = (*atoms_molecules)[j];
+            auto atom_j = atoms_molecules.cbegin() + j;
             T mat_elem(0.0);
             T vec_elem_i(0.0);
             T vec_elem_j(0.0);
-            atom_i->PolMatInteraction(*atom_j, mat_elem,
-                                      vec_elem_i, vec_elem_j);
+            (*atom_i)->PolMatInteraction(*(*atom_j), mat_elem,
+                                         vec_elem_i, vec_elem_j);
             
-            (*vec_mat)(i,thread_id) += vec_elem_i;
-            (*vec_mat)(j,thread_id) += vec_elem_j;
-            (*pol_mat)(i,j) = mat_elem;
-            (*pol_mat)(j,i) = mat_elem;
+            vec_mat(i,thread_id) += vec_elem_i;
+            vec_mat(j,thread_id) += vec_elem_j;
+            pol_mat(i,j) = mat_elem;
+            pol_mat(j,i) = mat_elem;
         }
     }
 }
