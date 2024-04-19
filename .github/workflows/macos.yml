@@ -12,41 +12,28 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
+              
             - name: install-cmake
-              run: |
-                brew install cmake
+              run: brew install cmake
+              
             - name: install-git
-              run: |
-                brew install git
+              run: brew install git
+              
             - name: install-openmp
-              run: |
-                brew install libomp
+              run: brew install libomp
+              
             - name: install-catch2
-              run: |
-                brew install catch2
+              run: brew install catch2
+              
             - name: install-pybind11
-              run: |
-                brew install pybind11
-            - name: install-autodiff
-              run: |
-                git clone https://github.com/autodiff/autodiff.git
-                cd autodiff
-                mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                sudo rm -rf autodiff
+              run: brew install pybind11
+              
             - name: install-eigen3
-              run: |
-                git clone https://gitlab.com/libeigen/eigen.git
-                cd eigen
-                mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                rm -rf eigen
+              run: brew install eigen
+            
+            - name: install-autodiff
+              run: brew install autodiff
+            
             - name: install-liblbfgs
               run: |
                 git clone https://github.com/chokkan/liblbfgs.git
@@ -57,6 +44,7 @@ jobs:
                 sudo make install
                 cd ../..
                 rm -rf liblbfgs
+                
             - name: compile-and-install
               run: |
                 mkdir build && cd build
