@@ -27,16 +27,6 @@ jobs:
             - name: install-pybind11
               run: |
                 brew install pybind11
-            - name: install-eigen3
-              run: |
-                git clone https://gitlab.com/libeigen/eigen.git
-                cd eigen
-                mkdir .build && cd .build
-                cmake ..
-                make
-                sudo make install
-                cd ../..
-                rm -rf eigen
             - name: install-autodiff
               run: |
                 git clone https://github.com/autodiff/autodiff.git
@@ -47,6 +37,16 @@ jobs:
                 sudo make install
                 cd ../..
                 sudo rm -rf autodiff
+            - name: install-eigen3
+              run: |
+                git clone https://gitlab.com/libeigen/eigen.git
+                cd eigen
+                mkdir .build && cd .build
+                cmake ..
+                make
+                sudo make install
+                cd ../..
+                rm -rf eigen
             - name: install-liblbfgs
               run: |
                 git clone https://github.com/chokkan/liblbfgs.git
