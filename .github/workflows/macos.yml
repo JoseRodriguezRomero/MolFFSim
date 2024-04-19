@@ -13,7 +13,7 @@ jobs:
             - uses: actions/checkout@v2
             - name: dummy
               run: |
-                cd ${{build-dir}}
+                cd build-dir
                 cmake ..
             - name: install-cmake
               run: |
