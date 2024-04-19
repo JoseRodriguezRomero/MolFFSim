@@ -10,14 +10,14 @@ jobs:
         name: build-and-install
         runs-on: macos-latest
         steps:
-            - uses: actions/checkout@v2
-            - name: dummy
-              run: |
-                cd build-dir
-                cmake ..
+            - name: Checkout code
+              uses: actions/checkout@v2
             - name: install-cmake
               run: |
                 brew install cmake
+            - name: install-git
+              run: |
+                brew install git
             - name: install-openmp
               run: |
                 brew install libomp
@@ -38,7 +38,7 @@ jobs:
                 brew install liblbfgs
             - name: compile-and-install
               run: |
-                cd ${{ github.workspace }}
+                cd MolFFSim
                 cmake ..
                 make
                 sudo make install
