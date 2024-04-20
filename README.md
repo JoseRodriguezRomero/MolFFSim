@@ -1,6 +1,6 @@
-![Static Badge](https://img.shields.io/badge/Linux-untested-yellow?logo=linux&logoColor=white)
+![Static Badge](https://img.shields.io/badge/Linux-runs-green?logo=linux&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/MacOS-runs-green?logo=apple&logoColor=white) 
-![Static Badge](https://img.shields.io/badge/Windows-unsupported-red?logo=windows&logoColor=white) \
+![Static Badge](https://img.shields.io/badge/Windows-use%20WSL-green?logo=windows&logoColor=white) \
 ![Static Badge](https://img.shields.io/badge/g%2B%2B-compiles-green?logo=gnu&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/clang%2B%2B-compiles-green?logo=llvm&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/msvc%2B%2B-untested-yellow?logo=microsoft&logoColor=white) \
