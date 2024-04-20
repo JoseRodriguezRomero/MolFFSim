@@ -108,9 +108,9 @@ public:
     T SystemEnergy();
     T SystemInteractionEnergy();
     
-    const std::vector<std::string> ListMoleculeTypes() const;
-    const unsigned MoleculeInstances(const std::string &molec_name) const;
-    const double MoleculeMonomerEnergy(const std::string &molec_name) const;
+    std::vector<std::string> ListMoleculeTypes() const;
+    unsigned MoleculeInstances(const std::string &molec_name) const;
+    double MoleculeMonomerEnergy(const std::string &molec_name) const;
     
     // Use this to optimize the isolated (monomer) geometry of the molecules.
     void MonomerPolarizeMolecules();

@@ -190,7 +190,7 @@ T Atom<T>::SelfEnergy() const {
 
 template<typename T>
 T Atom<T>::InteractionEnergy(const Atom &other) const {
-    T energy = 0;
+    T energy = T(0.0);
     std::vector<double> comb_xc_coeffs = xc_coeffs;
     
     switch (xc_rule) {

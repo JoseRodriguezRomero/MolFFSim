@@ -697,7 +697,7 @@ void System<T>::PolarizeMolecules() {
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
-        
+            
 #ifdef _OPENMP
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     Eigen::PartialPivLU<Eigen::Matrix<T,
@@ -718,7 +718,6 @@ static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
                      Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
                      const unsigned thread_id, const unsigned n_threads) {
     unsigned n_atoms = atoms_molecules.size();
-    energy_vec(thread_id) = T(0.0);
     
     for (unsigned i = 0; i < n_atoms; i++) {
         if (thread_id != (i % n_threads)) {
@@ -736,8 +735,7 @@ static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
             
             MolFFSim::Atom<T> *at_i_ptr = atoms_molecules[i];
             MolFFSim::Atom<T> *at_j_ptr = atoms_molecules[j];
-            energy_vec(thread_id) +=
-                at_i_ptr->InteractionEnergy(*at_j_ptr);
+            energy_vec(thread_id) += at_i_ptr->InteractionEnergy(*at_j_ptr);
         }
     }
 }
@@ -750,6 +748,8 @@ T System<T>::SystemEnergy() {
     std::thread *calc_threads[n_threads - 1];
     
     Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
+    energy_vec.setZero();
+    
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]  = new std::thread(std::bind(&sysThreadEnergy<T>,
             std::cref(atoms_molecules), std::ref(energy_vec), i, n_threads));
@@ -804,7 +804,7 @@ void System<T>::setECP() {
 }
 
 template <typename T>
-const std::vector<std::string> System<T>::ListMoleculeTypes() const {
+std::vector<std::string> System<T>::ListMoleculeTypes() const {
     std::vector<std::string> molec_names;
     molec_names.reserve(molecule_list.size());
     
@@ -816,7 +816,7 @@ const std::vector<std::string> System<T>::ListMoleculeTypes() const {
 }
 
 template <typename T>
-const unsigned System<T>::MoleculeInstances(
+unsigned System<T>::MoleculeInstances(
                                         const std::string &molec_name) const {
     if (molecule_instances.find(molec_name) == molecule_instances.end()) {
         return 0;
@@ -826,7 +826,7 @@ const unsigned System<T>::MoleculeInstances(
 }
 
 template <typename T>
-const double System<T>::MoleculeMonomerEnergy(
+double System<T>::MoleculeMonomerEnergy(
                                         const std::string &molec_name) const {
     if (monomer_energies.find(molec_name) == monomer_energies.end()) {
         return 0;

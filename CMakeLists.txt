@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
-# Project name
-project(MolFFSim LANGUAGES CXX)
-
 # Set C++ compiler (replace "g++" with your desired compiler)
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_CXX_COMPILER g++)
+
+# Project name
+project(MolFFSim LANGUAGES CXX)
 
 # Set C++ standard to C++17
 set(CMAKE_C_STANDARD 17)
@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
     set(OpenMP_C_FLAGS "${CMAKE_C_FLAGS} -Xpreprocessor -fopenmp")
-    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp")
+    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -Wall -Wextra -Wuninitialized")
     set(OpenMP_EXE_LINKER_FLAGS "-lomp")
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -23,7 +23,7 @@ if(APPLE)
     set(EXE_LINKER_FLAGS "${EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fopenmp ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fopenmp ${OpenMP_CXX_FLAGS} -Wall -Wextra -Wuninitialized")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 

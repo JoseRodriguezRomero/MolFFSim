@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
     omp_set_num_threads(n);
     Eigen::setNbThreads(n);
     
+    Eigen::initParallel();
+    
     // True if a single-point energy calculation is to be made.
     bool point_energy = true;
     
