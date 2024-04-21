@@ -34,15 +34,16 @@ private:
     
     // All the type of molecules in the system. The keys are the user-assigned
     // ID's (in the form of strings) given in the input file.
-    std::unordered_map<std::string,MolFFSim::Molecule<T>> molecule_list;
-    std::unordered_map<std::string,unsigned> molecule_instances;
     std::unordered_map<std::string,double> monomer_energies;
+    std::unordered_map<std::string,unsigned> molecule_instances;
+    std::unordered_map<std::string,MolFFSim::Molecule<T>> molecule_list;
     
     // Basis-function parametrization for the non-interacting ground states
     // eigendensities of all the elements of interest. The atomic number of
     // each element are used as hash keys.
     std::unordered_map<unsigned,std::vector<double>> elem_c_coeff;
     std::unordered_map<unsigned,std::vector<double>> elem_lambda_coeff;
+    
     bool is_ecp;
     
     std::unordered_map<unsigned,std::vector<double>> elem_xc_coeff;
@@ -128,6 +129,8 @@ public:
     
     int OptimizeGeometry(std::ostream &os = std::cout);
     inline std::ostream& OStream() { return *output_stream; }
+    
+    int OptimizeMoleculeGeometries(std::ostream &os = std::cout);
 };
 
 }

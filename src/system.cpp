@@ -680,15 +680,15 @@ void System<T>::PolarizeMolecules() {
     pol_mat.setZero();
     aux_vec_mat.setZero();
     
+    auto foo = std::bind(&matThreadPol<T>, std::cref(atoms_molecules),
+                         std::ref(pol_mat), std::ref(aux_vec_mat),
+                         std::placeholders::_1, n_threads);
+    
     for (unsigned i = 0; i < n_threads - 1; i++) {
-        calc_threads[i]  =
-            new std::thread(std::bind(&matThreadPol<T>,
-            std::cref(atoms_molecules), std::ref(pol_mat),
-            std::ref(aux_vec_mat), i, n_threads));
+        calc_threads[i] = new std::thread(foo, i);
     }
     
-    matThreadPol(atoms_molecules, pol_mat, aux_vec_mat, n_threads - 1,
-                 n_threads);
+    foo(n_threads - 1);
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]->join();
@@ -750,11 +750,15 @@ T System<T>::SystemEnergy() {
     Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
     energy_vec.setZero();
     
+    auto foo = std::bind(&sysThreadEnergy<T>, std::cref(atoms_molecules),
+                         std::ref(energy_vec), std::placeholders::_1,
+                         n_threads);
+    
     for (unsigned i = 0; i < n_threads - 1; i++) {
-        calc_threads[i]  = new std::thread(std::bind(&sysThreadEnergy<T>,
-            std::cref(atoms_molecules), std::ref(energy_vec), i, n_threads));
+        calc_threads[i]  = new std::thread(foo, i);
     }
-    sysThreadEnergy<T>(atoms_molecules, energy_vec, n_threads - 1, n_threads);
+    
+    foo(n_threads - 1);
     
     for (unsigned i = 0; i < n_threads - 1; i++) {
         calc_threads[i]->join();
@@ -926,6 +930,46 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     os << std::endl << std::endl;
     
     return ret;
+}
+
+template <>
+int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
+    auto it_end = molecule_list.end();
+    auto it_begin = molecule_list.begin();
+    for (auto it = it_begin; it != it_end; it++) {
+        os << "Begining optimization of: \"" << it->first << "\"";
+        os << std::endl << std::endl;
+        
+        it->second.OptimizeGeometry(os);
+        
+        char buffer[MAX_PRINT_BUFFER_SIZE];
+        for (int i = 0; i < 112; i++) {
+            os << "-";
+        }
+        os << std::endl;
+        
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%8s %25s %25s %25s %25s",
+                 "Element","x [Angstrom]","y [Angstrom]","z [Angstrom]",
+                 "Partial charge");
+        os << buffer << std::endl;
+        
+        for (int i = 0; i < 112; i++) {
+            os << "-";
+        }
+        os << std::endl << it->second;
+        
+        for (int i = 0; i < 112; i++) {
+            os << "-";
+        }
+        
+        os << std::endl;
+        os << std::endl;
+        
+        os << "End of optimization of: \"" << it->first << "\"";
+        os << std::endl << std::endl;
+    }
+    
+    return 0;
 }
 
 template <typename T>

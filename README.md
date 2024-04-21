@@ -8,7 +8,7 @@
 ![Static Badge](https://img.shields.io/badge/MPI-unsupported-red)
 ![Static Badge](https://img.shields.io/badge/std::thread-supported-green) \
 ![Static Badge](https://img.shields.io/badge/license-GPL--3.0-blue)
-![Static Badge](https://img.shields.io/badge/DOI-10.26434%2Fchemrxiv--2024--t5tfh--v2-blue?link=https%3A%2F%2Fchemrxiv.org%2Fengage%2Fchemrxiv%2Farticle-details%2F66033bf59138d23161602c69)
+
 # MolFFSim
 MolFFSim is an open-source program coded in C++ specifically designed for performing point-energy calculations of systems with one or many molecules, as well as optimizing their geometry by minimizing the energy. In the latter, all molecules are treated as rigid objects. The theoretical framework for the calculations in this program is rooted in the Orbital Free Density Functional Theory (OFDFT) approach, as detailed in the following references:
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)

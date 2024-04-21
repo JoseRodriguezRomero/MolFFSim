@@ -82,9 +82,6 @@ int main(int argc, char** argv) {
         input_file.close();
         
         if (system_geom_optim) {
-            Eigen::Vector<autodiff::dual,
-                Eigen::Dynamic> sys_params = system.SysParams();
-            
             system.PolarizeMolecules();
             system.OptimizeGeometry(std::cout);
             
@@ -101,6 +98,7 @@ int main(int argc, char** argv) {
             std::cout << buffer << std::endl << std::endl;
         }
         else if (molec_geom_optim) {
+            system.OptimizeMoleculeGeometries();
         }
     }
     

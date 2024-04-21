@@ -37,22 +37,25 @@
 
 #include "molecule.hpp"
 
-void XCCombRule1(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
-                 const std::vector<double> &xc_b) {
+static void XCCombRule1(std::vector<double> &xc_ab, 
+                        const std::vector<double> &xc_a,
+                        const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = (xc_a[i] + xc_b[i]) / 2.0;
     }
 }
 
-void XCCombRule2(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
-                 const std::vector<double> &xc_b) {
+static void XCCombRule2(std::vector<double> &xc_ab, 
+                        const std::vector<double> &xc_a,
+                        const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = sqrt(xc_a[i] * xc_b[i]);
     }
 }
 
-void XCCombRule3(std::vector<double> &xc_ab, const std::vector<double> &xc_a,
-                 const std::vector<double> &xc_b) {
+static void XCCombRule3(std::vector<double> &xc_ab, 
+                        const std::vector<double> &xc_a,
+                        const std::vector<double> &xc_b) {
     for (unsigned i = 0; i < 8; i++) {
         xc_ab[i] = (xc_a[i] * xc_b[i]) / (xc_a[i] + xc_b[i]);
     }
@@ -640,17 +643,59 @@ void Molecule<T>::setFullE() {
 }
 
 template<typename T>
-T Molecule<T>::SelfEnergy() const {
-    T energy = T(0);
-    for (auto it1 = atoms_rot.begin(); it1 != atoms_rot.end(); it1++) {
-        for (auto it2 = it1 + 1; it2 != atoms_rot.end(); it2++) {
-            energy += it1->InteractionEnergy(*it2);
+static void sysSelfEnergy(const std::vector<Atom<T>> &atoms_rot,
+                          Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
+                          const unsigned thread_id, 
+                          const unsigned n_threads) {
+    unsigned n_atoms = atoms_rot.size();
+    
+    for (unsigned i = 0; i < n_atoms; i++) {
+        if (thread_id != (i % n_threads)) {
+            continue;
         }
         
-        energy += it1->SelfEnergy();
+        energy_vec(thread_id) += atoms_rot[i].SelfEnergy();
     }
     
-    return energy;
+    for (unsigned i = 0; i < n_atoms; i++) {
+        for (unsigned j = i + 1; j < n_atoms; j++) {
+            if (thread_id != ((i*n_atoms + j) % n_threads)) {
+                continue;
+            }
+            
+            auto at_i_ptr = atoms_rot.cbegin() + i;
+            auto at_j_ptr = atoms_rot.cbegin() + j;
+            energy_vec(thread_id) += at_i_ptr->InteractionEnergy(*at_j_ptr);
+        }
+    }
+}
+
+template<typename T>
+T Molecule<T>::SelfEnergy() {
+    Polarize();
+    
+    unsigned n_threads = std::thread::hardware_concurrency();
+    std::thread *calc_threads[n_threads - 1];
+    
+    Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
+    energy_vec.setZero();
+    
+    auto foo = std::bind(&sysSelfEnergy<T>, std::cref(atoms_rot),
+                         std::ref(energy_vec), std::placeholders::_1,
+                         n_threads);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]  = new std::thread(foo, i);
+    }
+    
+    foo(n_threads - 1);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]->join();
+        delete calc_threads[i];
+    }
+        
+    return energy_vec.sum();
 }
 
 template<typename T>
@@ -685,44 +730,87 @@ void Molecule<T>::setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z) {
 }
 
 template<typename T>
-void Molecule<T>::Polarize() {
-    unsigned n_atoms = atoms_rot.size();
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat(n_atoms+1,n_atoms+1);
-    Eigen::Matrix<T,Eigen::Dynamic,1> vec_mat(n_atoms+1);
-    
-    pol_mat.setZero();
-    vec_mat.setZero();
+static void matThreadPol(const std::vector<Atom<T>> &atoms,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
+                Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
+                const unsigned thread_id, const unsigned num_threads) {
+    unsigned n_atoms = atoms.size();
     
     for (unsigned i = 0; i < n_atoms; i++) {
+        if (thread_id != (i % num_threads)) {
+            continue;
+        }
+        
         T mat_elem(0.0);
         T vec_elem(0.0);
-        atoms_rot[i].PolMatSelf(mat_elem, vec_elem);
+        
+        auto atom_i = atoms.cbegin() + i;
+        atom_i->PolMatSelf(mat_elem, vec_elem);
         
         pol_mat(i,i) = mat_elem;
-        vec_mat(i) += vec_elem;
+        vec_mat(i,thread_id) += vec_elem;
         
         pol_mat(i,n_atoms) =
-            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
-        pol_mat(n_atoms,i) = 
-            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
-        vec_mat(n_atoms) += 
-            ECPEffectiveAtomicNumber(atoms_rot[i].AtomicNumber());
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        pol_mat(n_atoms,i) =
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        vec_mat(n_atoms,thread_id) +=
+            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
     }
     
     for (unsigned i = 0; i < n_atoms; i++) {
+        auto atom_i = atoms.cbegin() + i;
         for (unsigned j = i + 1; j < n_atoms; j++) {
+            if (thread_id != ((i*n_atoms + j) % num_threads)) {
+                continue;
+            }
+            
+            auto atom_j = atoms.cbegin() + j;
             T mat_elem(0.0);
             T vec_elem_i(0.0);
             T vec_elem_j(0.0);
-            atoms_rot[i].PolMatInteraction(atoms_rot[j], mat_elem, vec_elem_i,
-                                           vec_elem_j);
+            atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i, 
+                                      vec_elem_j);
             
-             vec_mat(i) += vec_elem_i;
-             vec_mat(j) += vec_elem_j;
-             pol_mat(i,j) = mat_elem;
-             pol_mat(j,i) = mat_elem;
+            vec_mat(i,thread_id) += vec_elem_i;
+            vec_mat(j,thread_id) += vec_elem_j;
+            pol_mat(i,j) = mat_elem;
+            pol_mat(j,i) = mat_elem;
         }
     }
+}
+
+template<typename T>
+void Molecule<T>::Polarize() {
+    unsigned n_atoms = atoms_rot.size();
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
+        pol_mat(n_atoms+1,n_atoms+1);
+    
+    unsigned n_threads = std::thread::hardware_concurrency();
+    std::thread *calc_threads[n_threads - 1];
+        
+    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
+        aux_vec_mat(n_atoms+1, n_threads);
+    
+    pol_mat.setZero();
+    aux_vec_mat.setZero();
+    
+    auto foo = std::bind(&matThreadPol<T>, std::cref(atoms_rot),
+                         std::ref(pol_mat), std::ref(aux_vec_mat),
+                         std::placeholders::_1, n_threads);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i] = new std::thread(foo, i);
+    }
+    
+    foo(n_threads - 1);
+    
+    for (unsigned i = 0; i < n_threads - 1; i++) {
+        calc_threads[i]->join();
+        delete calc_threads[i];
+    }
+    
+    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     pol_coeffs = pol_mat.ldlt().solve(vec_mat);
@@ -756,12 +844,127 @@ bool Molecule<T>::operator!=(const Molecule& other) const {
     return (*this == other);
 }
 
-template <typename T>
-std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<T> &molec) {
-    char buffer[MAX_PRINT_BUFFER_SIZE];
-    molec.SelfEnergy(); // Run this to ensure the molecule rotation has been
-                        // updated before doing any printing.
+template<> autodiff::dual
+Molecule<autodiff::dual>::EnergyFromCoords(const Eigen::Vector<autodiff::dual,
+                                           Eigen::Dynamic> &at_coords) {
+    for (unsigned i = 0; i < atoms_rot.size(); i++) {
+        Eigen::Vector3<autodiff::dual> pos;
+        pos.x() = at_coords(i*3 + 0);
+        pos.y() = at_coords(i*3 + 1);
+        pos.z() = at_coords(i*3 + 2);
+        
+        atoms_rot[i].setPos(pos);
+    }
+    
+    Polarize();
+    return SelfEnergy();
+}
 
+template<>
+Eigen::Vector<autodiff::dual,Eigen::Dynamic>
+Molecule<autodiff::dual>::GradEnergyFromCoords(
+    const Eigen::Vector<autodiff::dual, Eigen::Dynamic> &at_coords) {
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> grad(at_coords.size());
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> coords(at_coords.size());
+    
+    auto foo = std::bind(&Molecule<autodiff::dual>::EnergyFromCoords,
+                         this, std::placeholders::_1);
+    
+    for (unsigned i = 0; i < atoms_rot.size(); i++) {
+        coords(i*3 + 0) = atoms_rot[i].Pos().x();
+        coords(i*3 + 1) = atoms_rot[i].Pos().y();
+        coords(i*3 + 2) = atoms_rot[i].Pos().z();
+    }
+    
+    for (unsigned i = 0; i < coords.size(); i++) {
+        grad(i) = derivative(foo, autodiff::wrt(coords(i)),
+                             autodiff::at(coords));
+    }
+    
+    return grad;
+}
+
+static int GeomOptimProgress(void *instance, 
+                             const lbfgsfloatval_t *x,
+                             const lbfgsfloatval_t *g,
+                             const lbfgsfloatval_t fx,
+                             const lbfgsfloatval_t xnorm,
+                             const lbfgsfloatval_t gnorm,
+                             const lbfgsfloatval_t step, 
+                             int n, int k, int ls) {
+    auto molecule_instance = static_cast<Molecule<autodiff::dual>*>(instance);
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "Iteration %d:\n", k);
+    molecule_instance->OStream() << buffer;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+             "  Molecule Energy : %15.5E [Hartree]", fx);
+    molecule_instance->OStream() << buffer << std::endl;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+             "  Gradient Norm   : %15.5E", gnorm);
+    molecule_instance->OStream() << buffer << std::endl << std::endl;
+    return 0;
+}
+
+static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
+                                         const lbfgsfloatval_t *x,
+                                         lbfgsfloatval_t *g, const int n,
+                                         const lbfgsfloatval_t step) {
+    auto molecule_instance = static_cast<Molecule<autodiff::dual>*>(instance);
+        
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_params(n);
+    for (int i = 0; i < n; i++) {
+        aux_params(i) = autodiff::dual(x[i]);
+    }
+    
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_grad =
+        molecule_instance->GradEnergyFromCoords(aux_params);
+    
+    for (int i = 0; i < n; i++) {
+        g[i] = lbfgsfloatval_t(aux_grad(i));
+    }
+    
+    return lbfgsfloatval_t(molecule_instance->EnergyFromCoords(aux_params));
+}
+
+template<>
+int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
+    setPos(Eigen::Vector3<autodiff::dual>(0.0, 0.0, 0.0));
+    setAnglesXYZ(0.0, 0.0, 0.0);
+    
+    int N = 3*atoms_rot.size();
+        
+    int ret = 0;
+    lbfgsfloatval_t fx;
+    lbfgsfloatval_t *x = lbfgs_malloc(N);
+    lbfgs_parameter_t param;
+    
+    for (unsigned i = 0; i < atoms_rot.size(); i++) {
+        x[3*i + 0] = lbfgsfloatval_t(atoms_rot[i].Pos().x());
+        x[3*i + 1] = lbfgsfloatval_t(atoms_rot[i].Pos().y());
+        x[3*i + 2] = lbfgsfloatval_t(atoms_rot[i].Pos().z());
+    }
+                                     
+    // Initialize the parameters for the L-BFGS optimization.
+    lbfgs_parameter_init(&param);
+    
+    output_stream = &os;
+    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
+    lbfgs_free(x);
+    
+    os << "Molecule geometry optimization done!" << std::endl;
+    os << std::endl << std::endl;
+    
+    return ret;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream &os, 
+                         const MolFFSim::Molecule<T> &molec) {
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    
 //    for (int i = 0; i < 112; i++) {
 //        os << "-";
 //    }

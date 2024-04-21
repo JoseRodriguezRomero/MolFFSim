@@ -226,10 +226,9 @@ T MolFFSim::NaiveModelE(const double lambda, const T &dist) {
     return erf(sqrt(lambda)*dist) / dist;
 }
 
-template<>
-autodiff::dual MolFFSim::XCSpheSymm(const double lambda,
-                                   const autodiff::dual &dist) {
-    std::vector<autodiff::dual> dist_pows;
+template<typename T>
+T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
+    std::vector<T> dist_pows;
     std::vector<double> lambda_pows;
     
     dist_pows.reserve(POW_TABLE_SIZE);
@@ -243,17 +242,16 @@ autodiff::dual MolFFSim::XCSpheSymm(const double lambda,
     }
     else {
         for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = abs(pow(dist,i));
+            dist_pows[i] = pow(dist,i);
             lambda_pows[i] = pow(lambda,i);
         }
     }
     
     // THIS IS PROBLEMATIC WITH AUTODIFF!!!
     // T aux_c = sqrt(lambda) /  (exp(lambda*dist_pows[2]) * M_PI_SQRT);
-    autodiff::dual aux_c = sqrt(lambda) *
-        exp(-lambda*dist_pows[2]) / M_PI_SQRT;
+    T aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) / M_PI_SQRT;
     
-    autodiff::dual xc_energy = autodiff::dual(0.0);
+    T xc_energy = T(0.0);
     xc_energy -= XCEnergy1(lambda_pows, dist_pows) / FACTORIAL_2;
     xc_energy += XCEnergy2(lambda_pows, dist_pows) / FACTORIAL_4;
     xc_energy -= XCEnergy3(lambda_pows, dist_pows) / FACTORIAL_6;
@@ -268,9 +266,9 @@ autodiff::dual MolFFSim::XCSpheSymm(const double lambda,
     return aux_c * xc_energy;
 }
 
-template<>
-double MolFFSim::XCSpheSymm(const double lambda, const double &dist) {
-    std::vector<double> dist_pows;
+template<typename T>
+T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
+    std::vector<T> dist_pows;
     std::vector<double> lambda_pows;
     
     dist_pows.reserve(POW_TABLE_SIZE);
@@ -284,96 +282,16 @@ double MolFFSim::XCSpheSymm(const double lambda, const double &dist) {
     }
     else {
         for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = std::abs(pow(dist,i));
-            lambda_pows[i] = pow(lambda,i);
-        }
-    }
-    
-    double aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) /  M_PI_SQRT;
-    
-    double xc_energy = 0.0;
-    xc_energy -= XCEnergy1(lambda_pows, dist_pows) / FACTORIAL_2;
-    xc_energy += XCEnergy2(lambda_pows, dist_pows) / FACTORIAL_4;
-    xc_energy -= XCEnergy3(lambda_pows, dist_pows) / FACTORIAL_6;
-    xc_energy += XCEnergy4(lambda_pows, dist_pows) / FACTORIAL_8;
-    xc_energy -= XCEnergy5(lambda_pows, dist_pows) / FACTORIAL_10;
-    xc_energy += XCEnergy6(lambda_pows, dist_pows) / FACTORIAL_12;
-    xc_energy -= XCEnergy7(lambda_pows, dist_pows) / FACTORIAL_14;
-    xc_energy += XCEnergy8(lambda_pows, dist_pows) / FACTORIAL_16;
-    xc_energy -= XCEnergy9(lambda_pows, dist_pows) / FACTORIAL_18;
-    xc_energy += XCEnergy10(lambda_pows, dist_pows) / FACTORIAL_20;
-    
-    return aux_c * xc_energy;
-}
-
-template<>
-autodiff::dual MolFFSim::XCCylinSymm(const double lambda,
-                                     const autodiff::dual &dist) {
-    std::vector<autodiff::dual> dist_pows;
-    std::vector<double> lambda_pows;
-    
-    dist_pows.reserve(POW_TABLE_SIZE);
-    lambda_pows.reserve(POW_TABLE_SIZE);
-    
-    if (dist == 0) {
-        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = 0;
-            lambda_pows[i] = pow(lambda,i);
-        }
-    }
-    else {
-        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = abs(pow(dist,i));
+            dist_pows[i] = pow(dist,i);
             lambda_pows[i] = pow(lambda,i);
         }
     }
     
     // THIS IS PROBLEMATIC WITH AUTODIFF!!!
     // T aux_c = sqrt(lambda) /  (exp(lambda*dist_pows[2]) * M_PI_SQRT);
-    autodiff::dual aux_c = sqrt(lambda) * 
-        exp(-lambda*dist_pows[2]) / M_PI_SQRT;
+    T aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) / M_PI_SQRT;
     
-    autodiff::dual xc_energy = autodiff::dual(0.0);
-    xc_energy += XCEnergyD1(lambda_pows, dist_pows) / FACTORIAL_3;
-    xc_energy -= XCEnergyD2(lambda_pows, dist_pows) / FACTORIAL_5;
-    xc_energy += XCEnergyD3(lambda_pows, dist_pows) / FACTORIAL_7;
-    xc_energy -= XCEnergyD4(lambda_pows, dist_pows) / FACTORIAL_9;
-    xc_energy += XCEnergyD5(lambda_pows, dist_pows) / FACTORIAL_11;
-    xc_energy -= XCEnergyD6(lambda_pows, dist_pows) / FACTORIAL_13;
-    xc_energy += XCEnergyD7(lambda_pows, dist_pows) / FACTORIAL_15;
-    xc_energy -= XCEnergyD8(lambda_pows, dist_pows) / FACTORIAL_17;
-    xc_energy += XCEnergyD9(lambda_pows, dist_pows) / FACTORIAL_19;
-    xc_energy -= XCEnergyD10(lambda_pows, dist_pows) / FACTORIAL_21;
-    
-    return aux_c * xc_energy;
-}
-
-template<>
-double MolFFSim::XCCylinSymm(const double lambda, const double &dist) {
-    std::vector<double> dist_pows;
-    std::vector<double> lambda_pows;
-    
-    dist_pows.reserve(POW_TABLE_SIZE);
-    lambda_pows.reserve(POW_TABLE_SIZE);
-    
-    if (dist == 0) {
-        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = 0;
-            lambda_pows[i] = pow(lambda,i);
-        }
-    }
-    else {
-        for (unsigned i = 0; i < POW_TABLE_SIZE; i++) {
-            dist_pows[i] = std::abs(pow(dist,i));
-            lambda_pows[i] = pow(lambda,i);
-        }
-    }
-    
-    // THIS IS PROBLEMATIC WITH AUTODIFF!!!
-    // T aux_c = sqrt(lambda) /  (exp(lambda*dist_pows[2]) * M_PI_SQRT);
-    double aux_c = sqrt(lambda) * exp(-lambda*dist_pows[2]) /  M_PI_SQRT;
-    
-    double xc_energy = 0.0;
+    T xc_energy = T(0.0);
     xc_energy += XCEnergyD1(lambda_pows, dist_pows) / FACTORIAL_3;
     xc_energy -= XCEnergyD2(lambda_pows, dist_pows) / FACTORIAL_5;
     xc_energy += XCEnergyD3(lambda_pows, dist_pows) / FACTORIAL_7;
@@ -436,3 +354,9 @@ template autodiff::dual XCEnergyD10(const std::vector<double> &lambda_pows, cons
 // Explicit instantiation of all the types for the naive model functional.
 template double MolFFSim::NaiveModelE(const double lambda, const double &dist);
 template autodiff::dual MolFFSim::NaiveModelE(const double lambda,const autodiff::dual &dist);
+
+template double MolFFSim::XCSpheSymm(const double lambda, const double &dist);
+template autodiff::dual MolFFSim::XCSpheSymm(const double lambda,const autodiff::dual &dist);
+
+template double MolFFSim::XCCylinSymm(const double lambda, const double &dist);
+template autodiff::dual MolFFSim::XCCylinSymm(const double lambda,const autodiff::dual &dist);

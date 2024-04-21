@@ -2,11 +2,14 @@
 #define CLASS_MOLECULE
 
 #include <stdio.h>
+#include <lbfgs.h>
 
 #include <cmath>
 #include <vector>
 #include <string>
+#include <thread>
 #include <algorithm>
+#include <functional>
 #include <unordered_map>
 
 #include <Eigen/Core>
@@ -176,6 +179,8 @@ private:
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
     
+    std::ostream *output_stream;
+    
 public:
     Molecule();
     Molecule(const Molecule &other);
@@ -254,8 +259,9 @@ public:
     void setECP();
     void setFullE();
     
-    T SelfEnergy() const;
     T InteractionEnergy(const Molecule &other) const;
+    T SelfEnergy();     // Pay attention when invoking this, it will set its
+                        // polarization coefficients to their monomer values.
     
     void setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z);
     
@@ -267,6 +273,13 @@ public:
     void operator=(const Molecule& other);
     bool operator==(const Molecule& other) const;
     bool operator!=(const Molecule& other) const;
+    
+    T EnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
+    Eigen::Vector<T,Eigen::Dynamic>
+        GradEnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
+    
+    int OptimizeGeometry(std::ostream &os);
+    inline std::ostream& OStream() { return *output_stream; }
 };
 
 }
