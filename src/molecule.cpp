@@ -844,11 +844,11 @@ bool Molecule<T>::operator!=(const Molecule& other) const {
     return (*this == other);
 }
 
-template<> autodiff::dual
-Molecule<autodiff::dual>::EnergyFromCoords(const Eigen::Vector<autodiff::dual,
+template<> autodiff::var
+Molecule<autodiff::var>::EnergyFromCoords(const Eigen::Vector<autodiff::var,
                                            Eigen::Dynamic> &at_coords) {
     for (unsigned i = 0; i < atoms_rot.size(); i++) {
-        Eigen::Vector3<autodiff::dual> pos;
+        Eigen::Vector3<autodiff::var> pos;
         pos.x() = at_coords(i*3 + 0);
         pos.y() = at_coords(i*3 + 1);
         pos.z() = at_coords(i*3 + 2);
@@ -861,13 +861,12 @@ Molecule<autodiff::dual>::EnergyFromCoords(const Eigen::Vector<autodiff::dual,
 }
 
 template<>
-Eigen::Vector<autodiff::dual,Eigen::Dynamic>
-Molecule<autodiff::dual>::GradEnergyFromCoords(
-    const Eigen::Vector<autodiff::dual, Eigen::Dynamic> &at_coords) {
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> grad(at_coords.size());
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> coords(at_coords.size());
+Eigen::VectorXd
+Molecule<autodiff::var>::GradEnergyFromCoords(
+    const Eigen::Vector<autodiff::var, Eigen::Dynamic> &at_coords) {
+    Eigen::Vector<autodiff::var, Eigen::Dynamic> coords(at_coords.size());
     
-    auto foo = std::bind(&Molecule<autodiff::dual>::EnergyFromCoords,
+    auto foo = std::bind(&Molecule<autodiff::var>::EnergyFromCoords,
                          this, std::placeholders::_1);
     
     for (unsigned i = 0; i < atoms_rot.size(); i++) {
@@ -876,12 +875,8 @@ Molecule<autodiff::dual>::GradEnergyFromCoords(
         coords(i*3 + 2) = atoms_rot[i].Pos().z();
     }
     
-    for (unsigned i = 0; i < coords.size(); i++) {
-        grad(i) = derivative(foo, autodiff::wrt(coords(i)),
-                             autodiff::at(coords));
-    }
-    
-    return grad;
+    autodiff::var u = foo(coords);
+    return gradient(u, coords);
 }
 
 static int GeomOptimProgress(void *instance, 
@@ -892,7 +887,7 @@ static int GeomOptimProgress(void *instance,
                              const lbfgsfloatval_t gnorm,
                              const lbfgsfloatval_t step, 
                              int n, int k, int ls) {
-    auto molecule_instance = static_cast<Molecule<autodiff::dual>*>(instance);
+    auto molecule_instance = static_cast<Molecule<autodiff::var>*>(instance);
     char buffer[MAX_PRINT_BUFFER_SIZE];
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "Iteration %d:\n", k);
@@ -912,14 +907,14 @@ static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
                                          const lbfgsfloatval_t *x,
                                          lbfgsfloatval_t *g, const int n,
                                          const lbfgsfloatval_t step) {
-    auto molecule_instance = static_cast<Molecule<autodiff::dual>*>(instance);
+    auto molecule_instance = static_cast<Molecule<autodiff::var>*>(instance);
         
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_params(n);
+    Eigen::Vector<autodiff::var,Eigen::Dynamic> aux_params(n);
     for (int i = 0; i < n; i++) {
-        aux_params(i) = autodiff::dual(x[i]);
+        aux_params(i) = autodiff::var(x[i]);
     }
     
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_grad =
+    Eigen::VectorXd aux_grad =
         molecule_instance->GradEnergyFromCoords(aux_params);
     
     for (int i = 0; i < n; i++) {
@@ -930,8 +925,8 @@ static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
 }
 
 template<>
-int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
-    setPos(Eigen::Vector3<autodiff::dual>(0.0, 0.0, 0.0));
+int Molecule<autodiff::var>::OptimizeGeometry(std::ostream &os) {
+    setPos(Eigen::Vector3<autodiff::var>(0.0, 0.0, 0.0));
     setAnglesXYZ(0.0, 0.0, 0.0);
     
     int N = 3*atoms_rot.size();
@@ -1003,11 +998,11 @@ std::ostream& operator<<(std::ostream &os,
 
 // Explicit instantiation of all the types for the class Atom.
 template class MolFFSim::Atom<double>;
-template class MolFFSim::Atom<autodiff::dual>;
+template class MolFFSim::Atom<autodiff::var>;
 
 // Explicit instantiation of all the types for the class Molecule.
 template class MolFFSim::Molecule<double>;
-template class MolFFSim::Molecule<autodiff::dual>;
+template class MolFFSim::Molecule<autodiff::var>;
 
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<double> &molec);
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<autodiff::dual> &molec);
+template std::ostream& operator<<(std::ostream &os, const MolFFSim::Molecule<autodiff::var> &molec);

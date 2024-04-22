@@ -594,24 +594,17 @@ void System<T>::SetSysParams(const Eigen::Vector<T,
 }
 
 template<>
-Eigen::Vector<autodiff::dual,Eigen::Dynamic>
-System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
+Eigen::VectorXd
+System<autodiff::var>::GradEnergyFromParams(const Eigen::Vector<autodiff::var,
                                              Eigen::Dynamic> &sys_params) {
     SetSysParams(sys_params);
     
     unsigned num_params = sys_params.size();
-    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient;
-    gradient.resize(num_params);
-    
-    auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
+    auto foo = std::bind(&MolFFSim::System<autodiff::var>::EnergyFromParams,
                          this, std::placeholders::_1);
+    autodiff::var u = foo(this->sys_params);
     
-    for (unsigned i = 0; i < num_params; i++) {
-        gradient[i] = derivative(foo, autodiff::wrt(this->sys_params(i)),
-                                 autodiff::at(this->sys_params));
-    }
-    
-    return gradient;
+    return gradient(u, this->sys_params);
 }
 
 template<typename T>
@@ -697,17 +690,10 @@ void System<T>::PolarizeMolecules() {
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
-            
-#ifdef _OPENMP
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    Eigen::PartialPivLU<Eigen::Matrix<T,
-        Eigen::Dynamic,Eigen::Dynamic>> lu_decomp(pol_mat);
-    pol_coeffs = lu_decomp.solve(vec_mat);
-#else
+    
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     pol_coeffs = pol_mat.ldlt().solve(vec_mat);
-#endif
-    
+            
     for (unsigned i = 0; i < n_atoms; i++) {
         atoms_molecules[i]->setPolCoeff(pol_coeffs(i));
     }
@@ -868,7 +854,7 @@ static int GeomOptimProgress(void *instance, const lbfgsfloatval_t *x,
                              const lbfgsfloatval_t step, int n, int k,
                              int ls) {
     auto system_instance =
-        static_cast<MolFFSim::System<autodiff::dual>*>(instance);
+        static_cast<MolFFSim::System<autodiff::var>*>(instance);
     char buffer[MAX_PRINT_BUFFER_SIZE];
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "Iteration %d:\n", k);
@@ -889,14 +875,14 @@ static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
                                          lbfgsfloatval_t *g, const int n,
                                          const lbfgsfloatval_t step) {
     auto system_instance =
-        static_cast<MolFFSim::System<autodiff::dual>*>(instance);
+        static_cast<MolFFSim::System<autodiff::var>*>(instance);
         
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_params(n);
+    Eigen::Vector<autodiff::var,Eigen::Dynamic> aux_params(n);
     for (int i = 0; i < n; i++) {
-        aux_params(i) = autodiff::dual(x[i]);
+        aux_params(i) = autodiff::var(x[i]);
     }
     
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> aux_grad =
+    Eigen::VectorXd aux_grad =
         system_instance->GradEnergyFromParams(aux_params);
     
     for (int i = 0; i < n; i++) {
@@ -907,7 +893,7 @@ static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
 }
 
 template <>
-int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
+int  System<autodiff::var>::OptimizeGeometry(std::ostream &os) {
     int N = sys_params.size();
         
     int ret = 0;
@@ -933,7 +919,7 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
 }
 
 template <>
-int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
+int System<autodiff::var>::OptimizeMoleculeGeometries(std::ostream &os) {
     auto it_end = molecule_list.end();
     auto it_begin = molecule_list.begin();
     for (auto it = it_begin; it != it_end; it++) {
@@ -1042,7 +1028,7 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
 
 // Explicit instantiation of all the types for the class System.
 template class MolFFSim::System<double>;
-template class MolFFSim::System<autodiff::dual>;
+template class MolFFSim::System<autodiff::var>;
 
 template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<double> &system);
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<autodiff::dual> &system);
+template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<autodiff::var> &system);

@@ -329,34 +329,34 @@ template double XCEnergyD8(const std::vector<double> &lambda_pows, const std::ve
 template double XCEnergyD9(const std::vector<double> &lambda_pows, const std::vector<double> &dist_pows);
 template double XCEnergyD10(const std::vector<double> &lambda_pows, const std::vector<double> &dist_pows);
 
-template autodiff::dual XCEnergy1(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy2(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy3(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy4(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy5(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy6(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy7(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy8(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy9(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergy10(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
+template autodiff::var XCEnergy1(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy2(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy3(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy4(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy5(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy6(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy7(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy8(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy9(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergy10(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
 
-template autodiff::dual XCEnergyD1(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD2(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD3(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD4(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD5(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD6(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD7(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD8(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD9(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
-template autodiff::dual XCEnergyD10(const std::vector<double> &lambda_pows, const std::vector<autodiff::dual> &dist_pows);
+template autodiff::var XCEnergyD1(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD2(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD3(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD4(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD5(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD6(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD7(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD8(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD9(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
+template autodiff::var XCEnergyD10(const std::vector<double> &lambda_pows, const std::vector<autodiff::var> &dist_pows);
 
 // Explicit instantiation of all the types for the naive model functional.
 template double MolFFSim::NaiveModelE(const double lambda, const double &dist);
-template autodiff::dual MolFFSim::NaiveModelE(const double lambda,const autodiff::dual &dist);
+template autodiff::var MolFFSim::NaiveModelE(const double lambda,const autodiff::var &dist);
 
 template double MolFFSim::XCSpheSymm(const double lambda, const double &dist);
-template autodiff::dual MolFFSim::XCSpheSymm(const double lambda,const autodiff::dual &dist);
+template autodiff::var MolFFSim::XCSpheSymm(const double lambda,const autodiff::var &dist);
 
 template double MolFFSim::XCCylinSymm(const double lambda, const double &dist);
-template autodiff::dual MolFFSim::XCCylinSymm(const double lambda,const autodiff::dual &dist);
+template autodiff::var MolFFSim::XCCylinSymm(const double lambda,const autodiff::var &dist);

@@ -7,7 +7,7 @@
 #include "omp.h"
 
 #include <Eigen/Core>
-#include <autodiff/forward/dual.hpp>
+#include <autodiff/reverse/var.hpp>
 
 #include "system.hpp"
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
         std::cout << buffer << std::endl << std::endl;
     }
     else {
-        MolFFSim::System<autodiff::dual> system;
+        MolFFSim::System<autodiff::var> system;
         system.ReadInputFile(input_file);
         input_file.close();
         

@@ -15,7 +15,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <autodiff/forward/dual.hpp>
+#include <autodiff/reverse/var.hpp>
+#include <autodiff/reverse/var/eigen.hpp>
 
 #include "auxiliary_functions.hpp"
 #include "xc_functionals.hpp"
@@ -275,8 +276,8 @@ public:
     bool operator!=(const Molecule& other) const;
     
     T EnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
-    Eigen::Vector<T,Eigen::Dynamic>
-        GradEnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
+    Eigen::VectorXd
+    GradEnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
     
     int OptimizeGeometry(std::ostream &os);
     inline std::ostream& OStream() { return *output_stream; }

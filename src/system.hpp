@@ -14,7 +14,11 @@
 #include <functional>
 #include <unordered_map>
 
-#include <autodiff/forward/dual.hpp>
+#include <Eigen/LU>
+#include <Eigen/Core>
+
+#include <autodiff/reverse/var.hpp>
+#include <autodiff/reverse/var/eigen.hpp>
 
 #include "auxiliary_functions.hpp"
 #include "molecule.hpp"
@@ -99,7 +103,7 @@ public:
         return energy;
     }
     
-    Eigen::Vector<T,Eigen::Dynamic> 
+    Eigen::VectorXd
     GradEnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params);
         
     // Use this for system-wide a geometry optimization, and point-energy
