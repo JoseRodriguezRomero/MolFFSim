@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <utility>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -31,6 +32,9 @@ private:
     // This is are auxiliary vectors, and should never be return in any of the
     // interfaces of this class.
     std::vector<Atom<T>*> atoms_molecules;
+    
+    // unrepeated pairs, e.g. ((i,j) == (j,i)) is true.
+    std::vector<std::pair<unsigned,unsigned>> atom_pairs;
     
     // All the type of molecules in the system. The keys are the user-assigned
     // ID's (in the form of strings) given in the input file.

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <thread>
+#include <utility>
 #include <algorithm>
 #include <functional>
 #include <unordered_map>
@@ -180,6 +181,8 @@ private:
     std::vector<double> box_side_len;
     
     std::ostream *output_stream;
+    
+    std::vector<std::pair<unsigned, unsigned>> atom_pairs;
     
 public:
     Molecule();

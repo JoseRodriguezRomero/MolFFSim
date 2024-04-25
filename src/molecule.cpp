@@ -35,6 +35,8 @@
 
 #define BOHR_TO_ANGSTROM            0.529177249
 
+#define THREAD_MAX_BUNCHS           20
+
 #include "molecule.hpp"
 
 static void XCCombRule1(std::vector<double> &xc_ab, 
@@ -504,6 +506,19 @@ template<typename T>
 Molecule<T>::~Molecule() {
 }
 
+static std::vector<std::pair<unsigned, unsigned>>
+GetPairs(const unsigned num_atoms) {
+    std::vector<std::pair<unsigned, unsigned>> pairs;
+    
+    for (unsigned i = 0; i < num_atoms; i++) {
+        for (unsigned j = i; j < num_atoms; j++) {
+            pairs.push_back(std::pair<unsigned, unsigned>(i,j));
+        }
+    }
+    
+    return pairs;
+}
+
 template<typename T>
 void Molecule<T>::addAtom(const MolFFSim::Atom<double> &atom) {
     atoms.push_back(atom);
@@ -521,6 +536,7 @@ void Molecule<T>::addAtom(const MolFFSim::Atom<double> &atom) {
     new_atom.setAtomicNumber(atom.AtomicNumber());
     
     atoms_rot.push_back(new_atom);
+    atom_pairs = GetPairs(atoms_rot.size());
 }
 
 template<typename T>
@@ -538,12 +554,14 @@ template<typename T>
 void Molecule<T>::removeAtom(const unsigned atom_index) {
     atoms.erase(atoms.begin() + atom_index);
     atoms_rot.erase(atoms_rot.begin() + atom_index);
+    atom_pairs = GetPairs(atoms_rot.size());
 }
 
 template<typename T>
 void Molecule<T>::removeAtoms(const unsigned from, const unsigned to) {
     atoms.erase(atoms.begin() + from, atoms.begin() + to + 1);
     atoms_rot.erase(atoms_rot.begin() + from, atoms_rot.begin() + to + 1);
+    atom_pairs = GetPairs(atoms_rot.size());
 }
 
 template<typename T>
@@ -644,28 +662,23 @@ void Molecule<T>::setFullE() {
 
 template<typename T>
 static void sysSelfEnergy(const std::vector<Atom<T>> &atoms_rot,
-                          Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
-                          const unsigned thread_id, 
-                          const unsigned n_threads) {
+                const std::vector<std::pair<unsigned, unsigned>> &atom_pairs,
+                Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
+                const unsigned from, const unsigned to,
+                const unsigned thread_id) {
     unsigned n_atoms = atoms_rot.size();
     
-    for (unsigned i = 0; i < n_atoms; i++) {
-        if (thread_id != (i % n_threads)) {
-            continue;
-        }
+    for (unsigned k = from; k < to; k++) {
+        const unsigned i = atom_pairs[k].first;
+        const unsigned j = atom_pairs[k].second;
         
-        energy_vec(thread_id) += atoms_rot[i].SelfEnergy();
-    }
-    
-    for (unsigned i = 0; i < n_atoms; i++) {
-        for (unsigned j = i + 1; j < n_atoms; j++) {
-            if (thread_id != ((i*n_atoms + j) % n_threads)) {
-                continue;
-            }
-            
-            auto at_i_ptr = atoms_rot.cbegin() + i;
-            auto at_j_ptr = atoms_rot.cbegin() + j;
-            energy_vec(thread_id) += at_i_ptr->InteractionEnergy(*at_j_ptr);
+        if (i == j) {
+            energy_vec(thread_id) += atoms_rot[i].SelfEnergy();
+        }
+        else {
+            auto atom_i = atoms_rot.cbegin() + i;
+            auto atom_j = atoms_rot.cbegin() + j;
+            energy_vec(thread_id) += atom_i->InteractionEnergy(*atom_j);
         }
     }
 }
@@ -675,22 +688,64 @@ T Molecule<T>::SelfEnergy() {
     Polarize();
     
     unsigned n_threads = std::thread::hardware_concurrency();
-    std::thread *calc_threads[n_threads - 1];
+    std::thread *calc_threads[n_threads];
     
     Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
     energy_vec.setZero();
     
     auto foo = std::bind(&sysSelfEnergy<T>, std::cref(atoms_rot),
-                         std::ref(energy_vec), std::placeholders::_1,
-                         n_threads);
+                         std::cref(atom_pairs), std::ref(energy_vec),
+                         std::placeholders::_1, std::placeholders::_2,
+                         std::placeholders::_3);
     
-    for (unsigned i = 0; i < n_threads - 1; i++) {
-        calc_threads[i]  = new std::thread(foo, i);
+    unsigned to = 0;
+    unsigned from = 0;
+        
+    for (unsigned i = 0; i < n_threads; i++) {
+        calc_threads[i] = nullptr;
     }
     
-    foo(n_threads - 1);
+    for (unsigned i = 0; i < n_threads; i++) {
+        from = to;
+        to += THREAD_MAX_BUNCHS;
+        
+        if (to > atom_pairs.size()) {
+            to = atom_pairs.size();
+            
+            calc_threads[i] = new std::thread(foo, from, to, i);
+            break;
+        }
+        else {
+            calc_threads[i] = new std::thread(foo, from, to, i);
+        }
+    }
     
-    for (unsigned i = 0; i < n_threads - 1; i++) {
+    while (to < atom_pairs.size()) {
+        for (unsigned i = 0; i < n_threads; i++) {
+            if (calc_threads[i]->joinable()) {
+                calc_threads[i]->join();
+                delete calc_threads[i];
+                
+                from = to;
+                to += THREAD_MAX_BUNCHS;
+                
+                if (to > atom_pairs.size()) {
+                    to = atom_pairs.size();
+                    calc_threads[i] = new std::thread(foo, from, to, i);
+                    break;
+                }
+                else {
+                    calc_threads[i] = new std::thread(foo, from, to, i);
+                }
+            }
+        }
+    }
+                
+    for (unsigned i = 0; i < n_threads; i++) {
+        if (calc_threads[i] == nullptr) {
+            break;
+        }
+        
         calc_threads[i]->join();
         delete calc_threads[i];
     }
@@ -731,45 +786,41 @@ void Molecule<T>::setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z) {
 
 template<typename T>
 static void matThreadPol(const std::vector<Atom<T>> &atoms,
+                const std::vector<std::pair<unsigned, unsigned>> &atom_pairs,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
-                const unsigned thread_id, const unsigned num_threads) {
+                const unsigned from, const unsigned to,
+                const unsigned thread_id) {
     unsigned n_atoms = atoms.size();
     
-    for (unsigned i = 0; i < n_atoms; i++) {
-        if (thread_id != (i % num_threads)) {
-            continue;
-        }
-        
-        T mat_elem(0.0);
-        T vec_elem(0.0);
+    for (unsigned k = from; k < to; k++) {
+        const unsigned i = atom_pairs[k].first;
+        const unsigned j = atom_pairs[k].second;
         
         auto atom_i = atoms.cbegin() + i;
-        atom_i->PolMatSelf(mat_elem, vec_elem);
+        auto atom_j = atoms.cbegin() + j;
         
-        pol_mat(i,i) = mat_elem;
-        vec_mat(i,thread_id) += vec_elem;
-        
-        pol_mat(i,n_atoms) =
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        pol_mat(n_atoms,i) =
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-        vec_mat(n_atoms,thread_id) +=
-            ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
-    }
-    
-    for (unsigned i = 0; i < n_atoms; i++) {
-        auto atom_i = atoms.cbegin() + i;
-        for (unsigned j = i + 1; j < n_atoms; j++) {
-            if (thread_id != ((i*n_atoms + j) % num_threads)) {
-                continue;
-            }
+        if (i == j) {
+            T mat_elem(0.0);
+            T vec_elem(0.0);
             
-            auto atom_j = atoms.cbegin() + j;
+            atom_i->PolMatSelf(mat_elem, vec_elem);
+            
+            pol_mat(i,i) = mat_elem;
+            vec_mat(i,thread_id) += vec_elem;
+            
+            pol_mat(i,n_atoms) =
+                ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+            pol_mat(n_atoms,i) =
+                ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+            vec_mat(n_atoms,thread_id) +=
+                ECPEffectiveAtomicNumber(atom_i->AtomicNumber());
+        }
+        else {
             T mat_elem(0.0);
             T vec_elem_i(0.0);
             T vec_elem_j(0.0);
-            atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i, 
+            atom_i->PolMatInteraction(*atom_j, mat_elem, vec_elem_i,
                                       vec_elem_j);
             
             vec_mat(i,thread_id) += vec_elem_i;
@@ -787,25 +838,67 @@ void Molecule<T>::Polarize() {
         pol_mat(n_atoms+1,n_atoms+1);
     
     unsigned n_threads = std::thread::hardware_concurrency();
-    std::thread *calc_threads[n_threads - 1];
+    std::thread *calc_threads[n_threads];
         
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
         aux_vec_mat(n_atoms+1, n_threads);
-    
+        
     pol_mat.setZero();
     aux_vec_mat.setZero();
     
     auto foo = std::bind(&matThreadPol<T>, std::cref(atoms_rot),
-                         std::ref(pol_mat), std::ref(aux_vec_mat),
-                         std::placeholders::_1, n_threads);
+                         std::cref(atom_pairs), std::ref(pol_mat),
+                         std::ref(aux_vec_mat), std::placeholders::_1,
+                         std::placeholders::_2, std::placeholders::_3);
     
-    for (unsigned i = 0; i < n_threads - 1; i++) {
-        calc_threads[i] = new std::thread(foo, i);
+    unsigned to = 0;
+    unsigned from = 0;
+        
+    for (unsigned i = 0; i < n_threads; i++) {
+        calc_threads[i] = nullptr;
     }
     
-    foo(n_threads - 1);
+    for (unsigned i = 0; i < n_threads; i++) {
+        from = to;
+        to += THREAD_MAX_BUNCHS;
+        
+        if (to > atom_pairs.size()) {
+            to = atom_pairs.size();
+            
+            calc_threads[i] = new std::thread(foo, from, to, i);
+            break;
+        }
+        else {
+            calc_threads[i] = new std::thread(foo, from, to, i);
+        }
+    }
     
-    for (unsigned i = 0; i < n_threads - 1; i++) {
+    while (to < atom_pairs.size()) {
+        for (unsigned i = 0; i < n_threads; i++) {
+            if (calc_threads[i]->joinable()) {
+                calc_threads[i]->join();
+                delete calc_threads[i];
+                
+                from = to;
+                to += THREAD_MAX_BUNCHS;
+                
+                if (to > atom_pairs.size()) {
+                    to = atom_pairs.size();
+                    calc_threads[i] = new std::thread(foo, from, to, i);
+                    break;
+                }
+                else {
+                    calc_threads[i] = new std::thread(foo, from, to, i);
+                }
+            }
+        }
+    }
+                
+    for (unsigned i = 0; i < n_threads; i++) {
+        if (calc_threads[i] == nullptr) {
+            break;
+        }
+        
         calc_threads[i]->join();
         delete calc_threads[i];
     }
@@ -856,7 +949,6 @@ Molecule<autodiff::dual>::EnergyFromCoords(const Eigen::Vector<autodiff::dual,
         atoms_rot[i].setPos(pos);
     }
     
-    Polarize();
     return SelfEnergy();
 }
 
@@ -933,6 +1025,13 @@ template<>
 int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     setPos(Eigen::Vector3<autodiff::dual>(0.0, 0.0, 0.0));
     setAnglesXYZ(0.0, 0.0, 0.0);
+    
+    atom_pairs.clear();
+    for (unsigned i = 0; i < atoms_rot.size(); i++) {
+        for (unsigned j = i; j < atoms_rot.size(); j++) {
+            atom_pairs.push_back(std::pair<unsigned,unsigned>(i,j));
+        }
+    }
     
     int N = 3*atoms_rot.size();
         
