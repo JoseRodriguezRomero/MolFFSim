@@ -98,7 +98,7 @@ The program's core functionality revolves around determining energies and partia
 
 The electronic densities from *ab initio* calculations utilizing an [Effective Core Potential (ECP)](https://manual.q-chem.com/5.3/Ch8.S10.html) basis-set are approximated with three s-type Gaussian basis functions at each atomic site. In contrast, for electronic densities obtained from full electron basis-set calculations, nine basis functions are utilized, except for hydrogen and helium atoms, where only three basis functions suffice. The parameters governing these basis functions depend solely on the argument provided to `atomic_basis` in the input file.
 
-For further details, please consult `ATOMIC_BASIS.md`.
+For further details, please consult `ATOMIC_BASIS/README.md`.
 
 ## Exchange and Correlation (XC) coefficients
 The energy functional in this program comprises two distinct components:
@@ -109,7 +109,7 @@ Given the spherical symmetry of ground state eigendensities, exact solutions exi
 
 Leveraging this understanding, the exchange and correlation functional is divided into four parts: two for electron-electron and electron-nuclei interactions, where the fictitious electron cloud exhibits spherical symmetry, and another two for electron-electron and electron-nuclei interactions, where the fictitious cloud has cylindrical symmetry. However, to fully parameterize the force field model due to different coefficients used for modeling the Mulliken charges, a total of eight fitting parameters are employed.
 
-For further details, please consult `XC_COEFFICIENTS.md`.
+For further details, please consult `XC_COEFFICIENTS/README.md`.
 
 ## Citing this program
 If you find this program useful please consider citing the following sources, that explain the theory behind this program, with the following BibTeX entries:
