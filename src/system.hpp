@@ -5,6 +5,7 @@
 #include <lbfgs.h>
 
 #include <cmath>
+#include <chrono>
 #include <thread>
 #include <vector>
 #include <string>

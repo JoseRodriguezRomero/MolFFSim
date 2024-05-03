@@ -11,7 +11,7 @@
 #define BOHR_TO_ANGSTROM            0.529177249
 #define HARTREE_TO_KJ_MOL           2625.5002
 
-#define THREAD_MAX_BUNCHS           20
+#define THREAD_MAX_BUNCHS           15
 
 #include "system.hpp"
 
@@ -730,6 +730,8 @@ void System<T>::PolarizeMolecules() {
                 }
             }
         }
+        
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
                 
     for (unsigned i = 0; i < n_threads; i++) {
@@ -837,6 +839,8 @@ T System<T>::SystemEnergy() {
                 }
             }
         }
+        
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
     
     for (unsigned i = 0; i < n_threads; i++) {
