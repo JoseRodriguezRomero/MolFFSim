@@ -605,6 +605,7 @@ template<>
 Eigen::Vector<autodiff::dual,Eigen::Dynamic>
 System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
                                              Eigen::Dynamic> &sys_params) {
+    SetSysParams(sys_params);
     unsigned num_params = sys_params.size();
     Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
     
@@ -637,6 +638,7 @@ Eigen::Vector<autodiff::dual,Eigen::Dynamic>
 System<autodiff::dual>::GradEnergyFromAtomsCoords(
                                         const Eigen::Vector<autodiff::dual,
                                         Eigen::Dynamic> &atom_coords) {
+    SetAtomsCoords(atom_coords);
     unsigned num_params = atom_coords.size();
     Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
     
