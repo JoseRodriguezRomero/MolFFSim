@@ -80,11 +80,16 @@ public:
     
     // A vector with 7*N entries, where N is the number of molecules in the
     // system. The first three entries are the displacement vector, the
-    // next four are the components of the rotaiton quaternion.
+    // next four are the components of the rotation quaternion.
     inline Eigen::Vector<T,Eigen::Dynamic> SysParams() const {
         return sys_params;
     }
 
+    // ----------------------------------------------------------
+    // --------  INTENDED FOR RIGID OBJECT MANIPULATION ---------
+    // ----------------------------------------------------------
+    // Every molecule is treated a rigid object here
+    
     void SetSysParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params);
     
     inline T
@@ -106,6 +111,34 @@ public:
     
     Eigen::Vector<T,Eigen::Dynamic> 
     GradEnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params);
+    
+    // ----------------------------------------------------------
+    // --------  INTENDED FOR RIGID OBJECT MANIPULATION ---------
+    // ----------------------------------------------------------
+    
+    // ----------------------------------------------------------
+    // --------     INTENDED FOR CALCULATING FORCES     ---------
+    // ----------------------------------------------------------
+    // The whole system is manipulated on an atom-per-atom basis here
+        
+    void SetAtomsCoords(const Eigen::Vector<T,Eigen::Dynamic> &atom_coords);
+    
+    inline T
+    EnergyFromAtomsCoords(const Eigen::Vector<T,
+                          Eigen::Dynamic> &atom_coords) {
+        SetAtomsCoords(atom_coords);
+        return SystemEnergy();
+    }
+    
+    Eigen::Vector<T,Eigen::Dynamic>
+    GradEnergyFromAtomsCoords(const Eigen::Vector<T,
+                              Eigen::Dynamic> &atom_coords);
+    
+    void printAtomForces(std::ostream &os = std::cout);
+    
+    // ----------------------------------------------------------
+    // --------     INTENDED FOR CALCULATING FORCES     ---------
+    // ----------------------------------------------------------
         
     // Use this for system-wide a geometry optimization, and point-energy
     // calculations of the system as a whole.
@@ -141,6 +174,6 @@ public:
 }
 
 template <typename T>
-std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system);
+std::ostream& operator<<(std::ostream &os, MolFFSim::System<T> &system);
 
 #endif

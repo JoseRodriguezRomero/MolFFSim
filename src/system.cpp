@@ -605,11 +605,8 @@ template<>
 Eigen::Vector<autodiff::dual,Eigen::Dynamic>
 System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
                                              Eigen::Dynamic> &sys_params) {
-    SetSysParams(sys_params);
-    
     unsigned num_params = sys_params.size();
-    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient;
-    gradient.resize(num_params);
+    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
     
     auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
                          this, std::placeholders::_1);
@@ -620,6 +617,96 @@ System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
     }
     
     return gradient;
+}
+
+template<typename T>
+void System<T>::SetAtomsCoords(const Eigen::Vector<T,
+                               Eigen::Dynamic> &atom_coords) {
+    for (unsigned i = 0; i < atoms_molecules.size(); i++) {
+        Eigen::Vector3<T> new_pos;
+        new_pos.x() = atom_coords[3*i + 0];
+        new_pos.y() = atom_coords[3*i + 1];
+        new_pos.z() = atom_coords[3*i + 2];
+        
+        atoms_molecules[i]->setPos(new_pos);
+    }
+}
+
+template<>
+Eigen::Vector<autodiff::dual,Eigen::Dynamic>
+System<autodiff::dual>::GradEnergyFromAtomsCoords(
+                                        const Eigen::Vector<autodiff::dual,
+                                        Eigen::Dynamic> &atom_coords) {
+    unsigned num_params = atom_coords.size();
+    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
+    
+    auto foo = std::bind(&System<autodiff::dual>::EnergyFromAtomsCoords,
+                         this, std::placeholders::_1);
+    
+    for (unsigned i = 0; i < num_params; i++) {
+        Eigen::Vector<autodiff::dual, Eigen::Dynamic> coords = atom_coords;
+        gradient[i] = derivative(foo, autodiff::wrt(coords(i)),
+                                 autodiff::at(coords));
+    }
+    
+    return gradient;
+}
+
+template<>
+void System<autodiff::dual>::printAtomForces(std::ostream &os) {
+    os << "System Atom Forces" << std::endl;
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    for (int i = 0; i < 86; i++) {
+        os << "-";
+    }
+    os << std::endl;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%8s %25s %25s %25s",
+             "", "x", "y","z");
+    os << buffer << std::endl;
+    
+    snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%8s %25s %25s %25s",
+             "Element", "[kJ/(mol*Angstrom)]", "[kJ/(mol*Angstrom)]",
+             "[kJ/(mol*Angstrom)]");
+    os << buffer << std::endl;
+    
+    for (int i = 0; i < 86; i++) {
+        os << "-";
+    }
+    os << std::endl;
+    
+    unsigned num_atoms = atoms_molecules.size();
+    Eigen::Vector<autodiff::dual,Eigen::Dynamic> atom_coords(3*num_atoms);
+    for (unsigned i = 0; i < num_atoms; i++) {
+        auto atom_pos = atoms_molecules[i]->Pos();
+        atom_coords[3*i + 0] = atom_pos.x();
+        atom_coords[3*i + 1] = atom_pos.y();
+        atom_coords[3*i + 2] = atom_pos.z();
+    }
+    
+    auto grad = GradEnergyFromAtomsCoords(atom_coords);
+    for (unsigned i = 0; i < num_atoms; i++) {
+        unsigned atomic_number = atoms_molecules[i]->AtomicNumber();
+        double fx = 
+            -double(grad[3*i + 0]) * HARTREE_TO_KJ_MOL / BOHR_TO_ANGSTROM;
+        double fy = 
+            -double(grad[3*i + 1]) * HARTREE_TO_KJ_MOL / BOHR_TO_ANGSTROM;
+        double fz = 
+            -double(grad[3*i + 2]) * HARTREE_TO_KJ_MOL / BOHR_TO_ANGSTROM;
+        
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%8s %25.5E %25.5E %25.5E",
+                 LabelFromAtomicNumber(atomic_number).c_str(), fx, fy, fz);
+        os << buffer << std::endl;
+    }
+    
+    for (int i = 0; i < 86; i++) {
+        os << "-";
+    }
+    os << std::endl << std::endl << std::endl;
+}
+
+template<>
+void System<double>::printAtomForces(std::ostream &os) {
 }
 
 template<typename T>
@@ -1059,7 +1146,7 @@ int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
 }
 
 template <typename T>
-std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
+std::ostream& operator<<(std::ostream &os, MolFFSim::System<T> &system) {
     os << "System Information" << std::endl;
     char buffer[MAX_PRINT_BUFFER_SIZE];
     for (int i = 0; i < 112; i++) {
@@ -1083,15 +1170,13 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
         }
         
         os << system.Molecules()[i];
-        
-        for (int i = 0; i < 112; i++) {
-            os << "-";
-        }
-        os << std::endl;
     }
-    
-    os << std::endl;
-    os << std::endl;
+    for (int i = 0; i < 112; i++) {
+        os << "-";
+    }
+    os << std::endl << std::endl << std::endl;
+        
+    system.printAtomForces(os);
     
     os << "Molecule/Fragment Information" << std::endl;
     
@@ -1130,5 +1215,5 @@ std::ostream& operator<<(std::ostream &os, const MolFFSim::System<T> &system) {
 template class MolFFSim::System<double>;
 template class MolFFSim::System<autodiff::dual>;
 
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<double> &system);
-template std::ostream& operator<<(std::ostream &os, const MolFFSim::System<autodiff::dual> &system);
+template std::ostream& operator<<(std::ostream &os, MolFFSim::System<double> &system);
+template std::ostream& operator<<(std::ostream &os, MolFFSim::System<autodiff::dual> &system);

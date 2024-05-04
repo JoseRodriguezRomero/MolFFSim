@@ -69,6 +69,15 @@ MolFFSim <input_file> point_energy
 
 The output of this type of calculation provides both the total and interaction energies of the entire system, along with the coordinates and partial charges of the molecules. However, molecules marked with `NO_PRINT` in the `MOLECULAR_SYSTEM` section of the input file will be excluded from the output.
 
+### Point-energy and atom forces
+> [!CAUTION]
+> This type of calculation is experimental, and with any of the predefined sets of exchange and correlation coefficients, the results obtained lack physical relevance.
+
+By default, the forces acting on every atom in the system are not printed on point-energy calculations. To include them use the following command:
+```Bash
+MolFFSim <input_file> point_energy_forces
+```
+
 ### Geometry optimization of a molecule
 > [!CAUTION]
 > This type of calculation is experimental, and with any of the predefined sets of exchange and correlation coefficients, the results obtained lack physical relevance.

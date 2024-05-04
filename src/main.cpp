@@ -31,6 +31,9 @@ int main(int argc, char** argv) {
     // any input file is unused in the mode of calculation.
     bool molec_geom_optim = false;
     
+    // True if the forces of each atom are to be printed.
+    bool point_energy_forces = false;
+    
     if (argc < 2) {
         std::cout << "Please specify an input file." << std::endl;
         return 0;
@@ -42,16 +45,25 @@ int main(int argc, char** argv) {
     for (unsigned i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "point_energy")) {
             point_energy = true;
+            point_energy_forces = false;
+            system_geom_optim = false;
+            molec_geom_optim = false;
+        }
+        if (!strcmp(argv[i], "point_energy_forces")) {
+            point_energy = false;
+            point_energy_forces = true;
             system_geom_optim = false;
             molec_geom_optim = false;
         }
         else if (!strcmp(argv[i], "system_geom_optim")) {
             point_energy = false;
+            point_energy_forces = false;
             system_geom_optim = true;
             molec_geom_optim = false;
         }
         else if (!strcmp(argv[i], "molec_geom_optim")) {
             point_energy = false;
+            point_energy_forces = false;
             system_geom_optim = false;
             molec_geom_optim = true;
         }
@@ -74,6 +86,24 @@ int main(int argc, char** argv) {
         snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
                  "Interaction Energy:", 
                  HARTREE_TO_KJ_MOL * system.SystemInteractionEnergy());
+        std::cout << buffer << std::endl << std::endl;
+    }
+    else if (point_energy_forces) {
+        MolFFSim::System<autodiff::dual> system;
+        system.ReadInputFile(input_file);
+        input_file.close();
+        
+        system.PolarizeMolecules();
+        std::cout << system << std::endl;;
+                
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                 "Total Energy:", HARTREE_TO_KJ_MOL *
+                 double(system.SystemEnergy()));
+        std::cout << buffer << std::endl;
+        
+        snprintf(buffer,MAX_PRINT_BUFFER_SIZE, "%-20s %15.5E [kJ/mol]",
+                 "Interaction Energy:", HARTREE_TO_KJ_MOL *
+                 double(system.SystemInteractionEnergy()));
         std::cout << buffer << std::endl << std::endl;
     }
     else {
