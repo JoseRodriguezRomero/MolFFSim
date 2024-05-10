@@ -95,6 +95,8 @@ MolFFSim <input_file> system_geom_optim
 ```
 The output format of this calculation mirrors that of a point-energy calculation. 
 
+Additionally, for this type of calculations, a backup file is printed approximately every ten seconds, with two backup files generated sequentially. Each backup file is formatted identically to an input file, allowing geometry optimizations to be resumed from either one. This sequential writing ensures a continuous availability of valid backup files, even if the program is interrupted during the backup process.
+
 ## Automatic differentiation
 To model the [Mulliken charges](https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Book%3A_Quantum_States_of_Atoms_and_Molecules_(Zielinksi_et_al)/10%3A_Theories_of_Electronic_Molecular_Structure/10.07%3A_Mulliken_Populations) of a molecular system, a fictitious self-energy functional is minimized. This functional mirrors the form of the functional used for modeling the system energy. Minimizing this problem simplifies to minimizing a quadratic function, thus solving a system of linear equations. The size of this system scales linearly with the number of atoms in the system.
 

@@ -66,6 +66,9 @@ private:
     const std::thread::id t_id = std::this_thread::get_id();
     
     std::ostream *output_stream;
+    std::string backup_filename1;
+    std::string backup_filename2;
+    std::chrono::steady_clock::time_point backup_clock;
     
 public:
     System();
@@ -169,6 +172,23 @@ public:
     inline std::ostream& OStream() { return *output_stream; }
     
     int OptimizeMoleculeGeometries(std::ostream &os = std::cout);
+    void printInputSettings(std::ostream &os = std::cout) const;
+    
+    void printBackups();
+    std::string BackupFile1() const { return backup_filename1; }
+    std::string BackupFile2() const { return backup_filename2; }
+    
+    inline void setBackupFile1(const std::string &backup_filename1) {
+        this->backup_filename1 = backup_filename1;
+    }
+    
+    inline void setBackupFile2(const std::string &backup_filename2) {
+        this->backup_filename2 = backup_filename2;
+    }
+    
+    inline std::chrono::steady_clock::time_point& backupClock(){
+        return backup_clock;
+    };
 };
 
 }

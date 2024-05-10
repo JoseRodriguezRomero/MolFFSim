@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "omp.h"
 
@@ -41,6 +42,16 @@ int main(int argc, char** argv) {
     
     std::ifstream input_file;
     input_file.open(argv[1], std::fstream::in);
+    
+    std::string backup_filename1 = "backup1_";
+    backup_filename1 += std::filesystem::path(argv[1]).filename();
+    backup_filename1 =
+        std::filesystem::path(argv[1]).replace_filename(backup_filename1);
+    
+    std::string backup_filename2 = "backup2_";
+    backup_filename2 += std::filesystem::path(argv[1]).filename();
+    backup_filename2 =
+        std::filesystem::path(argv[1]).replace_filename(backup_filename2);
     
     for (unsigned i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "point_energy")) {
@@ -87,6 +98,9 @@ int main(int argc, char** argv) {
                  "Interaction Energy:", 
                  HARTREE_TO_KJ_MOL * system.SystemInteractionEnergy());
         std::cout << buffer << std::endl << std::endl;
+        
+        std::cout << std::endl << std::endl;
+        system.printInputSettings();
     }
     else if (point_energy_forces) {
         MolFFSim::System<autodiff::dual> system;
@@ -110,6 +124,9 @@ int main(int argc, char** argv) {
         MolFFSim::System<autodiff::dual> system;
         system.ReadInputFile(input_file);
         input_file.close();
+        
+        system.setBackupFile1(backup_filename1);
+        system.setBackupFile2(backup_filename2);
         
         if (system_geom_optim) {
             system.PolarizeMolecules();

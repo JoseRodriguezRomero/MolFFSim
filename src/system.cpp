@@ -929,7 +929,9 @@ T System<T>::SystemEnergy() {
             }
         }
         
-        std::this_thread::sleep_for(std::chrono::microseconds(50));
+        if (to < atom_pairs.size()) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
     }
     
     for (unsigned i = 0; i < n_threads; i++) {
@@ -1056,6 +1058,18 @@ static int GeomOptimProgress(void *instance, const lbfgsfloatval_t *x,
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
              "  Gradient Norm : %15.5E", gnorm);
     system_instance->OStream() << buffer << std::endl << std::endl;
+    
+    std::chrono::steady_clock::time_point clock_now =
+        std::chrono::steady_clock::now();
+    
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        clock_now - system_instance->backupClock()).count();
+    
+    if (elapsed >= 10) {
+        system_instance->printBackups();
+        system_instance->backupClock() = std::chrono::steady_clock::now();
+    }
+    
     return 0;
 }
 
@@ -1098,9 +1112,11 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     lbfgs_parameter_init(&param);
     
     output_stream = &os;
+    backup_clock = std::chrono::steady_clock::now();
     ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
     lbfgs_free(x);
     
+    printBackups();
     os << "System geometry optimization done!" << std::endl;
     os << std::endl << std::endl;
     
@@ -1145,6 +1161,111 @@ int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
     }
     
     return 0;
+}
+
+template <typename T>
+void System<T>::printInputSettings(std::ostream &os) const {
+    char buffer[MAX_PRINT_BUFFER_SIZE];
+    snprintf(buffer,MAX_PRINT_BUFFER_SIZE,"%-25s %d",
+             "system_charge",system_charge);
+    os << buffer << std::endl;
+    
+    std::vector<std::string> str_is_periodic;
+    for (unsigned i = 0; i < 3; i++) {
+        if (is_periodic[i]) {
+            str_is_periodic.push_back("true");
+        }
+        else {
+            str_is_periodic.push_back("false");
+        }
+    }
+    
+    snprintf(buffer,MAX_PRINT_BUFFER_SIZE,"%-25s %s %s %s",
+             "is_periodic",str_is_periodic[0].c_str(),
+             str_is_periodic[1].c_str(), str_is_periodic[2].c_str());
+    os << buffer << std::endl;
+    
+    snprintf(buffer,MAX_PRINT_BUFFER_SIZE,"%-25s %-10.2lf %-10.2lf %-10.2lf",
+             "periodic_box_sizes",box_side_len[0],box_side_len[1],
+             box_side_len[2]);
+    os << buffer << std::endl;
+    
+    snprintf(buffer,MAX_PRINT_BUFFER_SIZE,"%-25s %-s",
+             "atomic_basis",atom_basis_collection.c_str());
+    os << buffer << std::endl;
+    
+    snprintf(buffer,MAX_PRINT_BUFFER_SIZE,"%-25s %-s",
+             "xc_coefficients",xc_coeff_collection.c_str());
+    os << buffer << std::endl << std::endl;
+    
+    os << "BEGIN MOLECULE_LIST" << std::endl;
+    auto it1_end = molecule_list.cend();
+    auto it1_begin = molecule_list.cbegin();
+    for (auto it1 = it1_begin; it1 != it1_end; it1++) {
+        os << "BEGIN MOLECULE " << it1->first << std::endl;
+        auto it2_end = it1->second.const_Atoms().cend();
+        auto it2_begin = it1->second.const_Atoms().cbegin();
+        for (auto it2 = it2_begin; it2 != it2_end; it2++) {
+            
+            snprintf(buffer,MAX_PRINT_BUFFER_SIZE,
+                     "%-3s %28.10lf %28.10lf %28.10lf",
+                     LabelFromAtomicNumber(it2->AtomicNumber()).c_str(),
+                     double(it2->Pos().x())*BOHR_TO_ANGSTROM,
+                     double(it2->Pos().y())*BOHR_TO_ANGSTROM,
+                     double(it2->Pos().z())*BOHR_TO_ANGSTROM);
+            os << buffer << std::endl;
+        }
+        
+        os << "END MOLECULE" << std::endl;
+    }
+    os << "END MOLECULE_LIST" << std::endl << std::endl;
+    
+    os << "BEGIN MOLECULAR_SYSTEM" << std::endl;
+    auto itA_end = molecule_list.cend();
+    auto itA_begin = molecule_list.cbegin();
+    for (unsigned i = 0; i < molecules.size(); i++) {
+        if (molecules_to_print[i]) {
+            snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%-10s %-12s %-12s ",
+                     names_molecules[i].c_str(), "PRINT", "QUATERNION");
+            os << buffer;
+        }
+        else {
+            snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%-10s %-12s %-12s ",
+                     names_molecules[i].c_str(), "NO_PRINT", "QUATERNION");
+            os << buffer;
+        }
+        
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+                 "%20.10lf %20.10lf %20.10lf ",
+                 double(molecules[i].Pos().x())*BOHR_TO_ANGSTROM,
+                 double(molecules[i].Pos().y())*BOHR_TO_ANGSTROM,
+                 double(molecules[i].Pos().z())*BOHR_TO_ANGSTROM);
+        os << buffer;
+        
+        snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
+                 "%20.10lf %20.10lf %20.10lf %20.10lf ",
+                 double(molecules[i].RotQ().w()),
+                 double(molecules[i].RotQ().x()),
+                 double(molecules[i].RotQ().y()),
+                 double(molecules[i].RotQ().z()));
+        os << buffer;
+        
+        os << std::endl;
+    }
+    os << "END MOLECULAR_SYSTEM" << std::endl << std::endl;
+}
+
+template <typename T>
+void System<T>::printBackups() {
+    std::fstream backup1;
+    backup1.open(backup_filename1,std::fstream::out);
+    printInputSettings(backup1);
+    backup1.close();
+    
+    std::fstream backup2;
+    backup2.open(backup_filename2,std::fstream::out);
+    printInputSettings(backup2);
+    backup2.close();
 }
 
 template <typename T>
