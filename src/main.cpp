@@ -98,9 +98,6 @@ int main(int argc, char** argv) {
                  "Interaction Energy:", 
                  HARTREE_TO_KJ_MOL * system.SystemInteractionEnergy());
         std::cout << buffer << std::endl << std::endl;
-        
-        std::cout << std::endl << std::endl;
-        system.printInputSettings();
     }
     else if (point_energy_forces) {
         MolFFSim::System<autodiff::dual> system;
