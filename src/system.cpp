@@ -940,6 +940,7 @@ T System<T>::SystemEnergy() {
         }
         
         calc_threads[i]->join();
+        delete calc_threads[i];
     }
         
     return energy_vec.sum();
