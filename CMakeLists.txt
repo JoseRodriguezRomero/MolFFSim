@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
     set(OpenMP_C_FLAGS "${CMAKE_C_FLAGS} -Xpreprocessor -fopenmp")
-    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp")
+    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Xpreprocessor -fopenmp")
     set(OpenMP_EXE_LINKER_FLAGS "-lomp")
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -23,7 +23,7 @@ if(APPLE)
     set(EXE_LINKER_FLAGS "${EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else()
     set(OpenMP_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+    set(OpenMP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fopenmp")
     set(OpenMP_EXE_LINKER_FLAGS "-lomp")
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

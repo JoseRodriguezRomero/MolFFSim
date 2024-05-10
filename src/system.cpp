@@ -820,7 +820,9 @@ void System<T>::PolarizeMolecules() {
             }
         }
         
-        std::this_thread::sleep_for(std::chrono::microseconds(50));
+        if (to < atom_pairs.size()) {
+            std::this_thread::sleep_for(std::chrono::microseconds(50));
+        }
     }
                 
     for (unsigned i = 0; i < n_threads; i++) {
@@ -1112,13 +1114,21 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     // Initialize the parameters for the L-BFGS optimization.
     lbfgs_parameter_init(&param);
     
+    auto t0 = std::chrono::steady_clock::now();
+    
     output_stream = &os;
     backup_clock = std::chrono::steady_clock::now();
     ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
     lbfgs_free(x);
     
+    auto t1 = std::chrono::steady_clock::now();
+    
+    const auto elapsed = 
+        std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0).count();
+    
     printBackups();
     os << "System geometry optimization done!" << std::endl;
+    os << "Elapsed time: " << elapsed / 1000.0 << " seconds" << std::endl;
     os << std::endl << std::endl;
     
     return ret;
