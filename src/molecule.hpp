@@ -10,7 +10,6 @@
 #include <thread>
 #include <utility>
 #include <algorithm>
-#include <functional>
 #include <unordered_map>
 
 #include <Eigen/Core>

@@ -766,31 +766,21 @@ void System<T>::PolarizeMolecules() {
         pol_mat(n_atoms+1,n_atoms+1);
     
     unsigned n_threads = std::thread::hardware_concurrency();
-    std::thread *calc_threads[n_threads];
-        
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
         aux_vec_mat(n_atoms+1, n_threads);
     
     pol_mat.setZero();
     aux_vec_mat.setZero();
-        
-    auto foo = std::bind(&matThreadPol<T>, std::cref(atoms_molecules),
-                         std::cref(atom_pairs), std::ref(pol_mat),
-                         std::ref(aux_vec_mat), std::placeholders::_1,
-                         std::placeholders::_2);
-    
-    for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i] = new std::thread(foo, i, n_threads);
-    }
-                    
-    for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i]->join();
-        delete calc_threads[i];
-    }
             
+    #pragma omp parallel for
+    for (unsigned i = 0; i < n_threads; i++) {
+        matThreadPol(atoms_molecules, atom_pairs, pol_mat, 
+                     aux_vec_mat, i, n_threads);
+    }
+                
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
-            
+    
 #ifdef _OPENMP
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     Eigen::PartialPivLU<Eigen::Matrix<T,
@@ -811,8 +801,6 @@ static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
                 const std::vector<std::pair<unsigned, unsigned>> &atom_pairs,
                 Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
                 const unsigned thread_id, const unsigned num_threads) {
-    unsigned n_atoms = atoms_molecules.size();
-    
     for (unsigned k = 0; k < atom_pairs.size(); k++) {
         if ((k % num_threads) != thread_id) {
             continue;
@@ -837,27 +825,15 @@ T System<T>::SystemEnergy() {
     PolarizeMolecules();
     
     unsigned n_threads = std::thread::hardware_concurrency();
-    std::thread *calc_threads[n_threads];
-    
     Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
     energy_vec.setZero();
-    
-    auto foo = std::bind(&sysThreadEnergy<T>, std::cref(atoms_molecules),
-                         std::cref(atom_pairs), std::ref(energy_vec),
-                         std::placeholders::_1, std::placeholders::_2);
-    
-    unsigned to = 0;
-    unsigned from = 0;
-            
-    for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i] = new std::thread(foo, i, n_threads);
-    }
         
+    #pragma omp parallel for
     for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i]->join();
-        delete calc_threads[i];
+        sysThreadEnergy(atoms_molecules, atom_pairs, energy_vec, 
+                        i, n_threads);
     }
-        
+    
     return energy_vec.sum();
 }
 

@@ -5,8 +5,7 @@
 ![Static Badge](https://img.shields.io/badge/clang%2B%2B-compiles-green?logo=llvm&logoColor=white)
 ![Static Badge](https://img.shields.io/badge/msvc%2B%2B-untested-yellow?logo=microsoft&logoColor=white) \
 ![Static Badge](https://img.shields.io/badge/OpenMP-supported-green)
-![Static Badge](https://img.shields.io/badge/MPI-unsupported-red)
-![Static Badge](https://img.shields.io/badge/std::thread-supported-green) \
+![Static Badge](https://img.shields.io/badge/MPI-unsupported-red) \
 ![Static Badge](https://img.shields.io/badge/license-GPL--3.0-blue)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11004648.svg)](https://doi.org/10.5281/zenodo.11004648)
 
@@ -15,7 +14,7 @@ MolFFSim is an open-source program coded in C++ specifically designed for perfor
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)
   * [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
 
-Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Currently, only forward mode automatic differentiation is supported. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using a combination of `std::thread` and [OpenMP](https://www.openmp.org/). All non-linear minimizations problems, related to both kinds of geometry optimizations supported in this program, are handled through [libLBFGS](https://www.chokkan.org/software/liblbfgs/).
+Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Currently, only forward mode automatic differentiation is supported. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using [OpenMP](https://www.openmp.org/). All non-linear minimizations problems, related to both kinds of geometry optimizations supported in this program, are handled through [libLBFGS](https://www.chokkan.org/software/liblbfgs/).
 
 ## Compiling and installing
 In principle, any C++ compiler that supports C++17 can compile this program. However, thus far, it has been tested only with GCC and Clang compilers. Before proceeding with the compilation and installation, ensure that [CMake](https://gitlab.kitware.com/cmake/cmake) and [OpenMP](https://www.openmp.org/) are installed, along with the C++ libraries [Eigen](https://gitlab.com/libeigen/eigen), [autodiff](https://autodiff.github.io/) and [libLBFGS](https://www.chokkan.org/software/liblbfgs/). Detailed instructions on compiling and installing these libraries are available on their respective GitHub/GitLab repositories.
