@@ -819,10 +819,6 @@ void System<T>::PolarizeMolecules() {
                 }
             }
         }
-        
-        if (to < atom_pairs.size()) {
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
-        }
     }
                 
     for (unsigned i = 0; i < n_threads; i++) {
@@ -929,10 +925,6 @@ T System<T>::SystemEnergy() {
                     calc_threads[i] = new std::thread(foo, from, to, i);
                 }
             }
-        }
-        
-        if (to < atom_pairs.size()) {
-            std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
     }
     

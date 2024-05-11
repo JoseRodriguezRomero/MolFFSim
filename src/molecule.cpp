@@ -739,8 +739,6 @@ T Molecule<T>::SelfEnergy() {
                 }
             }
         }
-        
-        std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
                 
     for (unsigned i = 0; i < n_threads; i++) {
@@ -894,8 +892,6 @@ void Molecule<T>::Polarize() {
                 }
             }
         }
-        
-        std::this_thread::sleep_for(std::chrono::microseconds(50));
     }
                 
     for (unsigned i = 0; i < n_threads; i++) {
