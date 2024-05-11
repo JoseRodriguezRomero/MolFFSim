@@ -821,7 +821,7 @@ void System<T>::PolarizeMolecules() {
         }
         
         if (to < atom_pairs.size()) {
-            std::this_thread::sleep_for(std::chrono::microseconds(50));
+            std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
     }
                 
@@ -932,7 +932,7 @@ T System<T>::SystemEnergy() {
         }
         
         if (to < atom_pairs.size()) {
-            std::this_thread::sleep_for(std::chrono::microseconds(50));
+            std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
     }
     
@@ -1113,6 +1113,8 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
                                  
     // Initialize the parameters for the L-BFGS optimization.
     lbfgs_parameter_init(&param);
+        
+    param.m = 1500;
     
     auto t0 = std::chrono::steady_clock::now();
     

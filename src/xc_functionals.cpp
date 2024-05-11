@@ -24,6 +24,8 @@
 #define FACTORIAL_20                2432902008176640000.0
 #define FACTORIAL_21                51090942171709440000.0
 
+#define APPROX_RADIUS               25.0
+
 #include "xc_functionals.hpp"
 
 template<typename T>
@@ -222,12 +224,20 @@ T MolFFSim::NaiveModelE(const double lambda, const T &dist) {
     if (dist <= MIN_ATOM_POTENTIAL_DIST) {
         return 2.0*sqrt(lambda) / M_PI_SQRT;
     }
+        
+    if ((lambda*dist*dist) >= APPROX_RADIUS) {
+        return 1.0 / dist;
+    }
     
     return erf(sqrt(lambda)*dist) / dist;
 }
 
 template<typename T>
 T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
+    if ((lambda*dist*dist) >= APPROX_RADIUS) {
+        return T(0.0);
+    }
+    
     std::vector<T> dist_pows;
     std::vector<double> lambda_pows;
     
@@ -268,6 +278,10 @@ T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
 
 template<typename T>
 T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
+    if ((lambda*dist*dist) >= APPROX_RADIUS) {
+        return T(0.0);
+    }
+    
     std::vector<T> dist_pows;
     std::vector<double> lambda_pows;
     
