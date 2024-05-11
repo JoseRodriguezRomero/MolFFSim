@@ -11,8 +11,6 @@
 #define BOHR_TO_ANGSTROM            0.529177249
 #define HARTREE_TO_KJ_MOL           2625.5002
 
-#define THREAD_MAX_BUNCHS           15
-
 #include "system.hpp"
 
 using namespace MolFFSim;
@@ -716,11 +714,14 @@ static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
                 const std::vector<std::pair<unsigned, unsigned>> &atom_pairs,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &pol_mat,
                 Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> &vec_mat,
-                const unsigned from, const unsigned to,
-                const unsigned thread_id) {
+                const unsigned thread_id, const unsigned num_threads) {
     unsigned n_atoms = atoms_molecules.size();
     
-    for (unsigned k = from; k < to; k++) {
+    for (unsigned k = 0; k < atom_pairs.size(); k++) {
+        if ((k % num_threads) != thread_id) {
+            continue;
+        }
+        
         const unsigned i = atom_pairs[k].first;
         const unsigned j = atom_pairs[k].second;
         
@@ -776,56 +777,13 @@ void System<T>::PolarizeMolecules() {
     auto foo = std::bind(&matThreadPol<T>, std::cref(atoms_molecules),
                          std::cref(atom_pairs), std::ref(pol_mat),
                          std::ref(aux_vec_mat), std::placeholders::_1,
-                         std::placeholders::_2, std::placeholders::_3);
-    
-    unsigned to = 0;
-    unsigned from = 0;
-        
-    for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i] = nullptr;
-    }
+                         std::placeholders::_2);
     
     for (unsigned i = 0; i < n_threads; i++) {
-        from = to;
-        to += THREAD_MAX_BUNCHS;
-        
-        if (to > atom_pairs.size()) {
-            to = atom_pairs.size();
-            
-            calc_threads[i] = new std::thread(foo, from, to, i);
-            break;
-        }
-        else {
-            calc_threads[i] = new std::thread(foo, from, to, i);
-        }
+        calc_threads[i] = new std::thread(foo, i, n_threads);
     }
-    
-    while (to < atom_pairs.size()) {
-        for (unsigned i = 0; i < n_threads; i++) {
-            if (calc_threads[i]->joinable()) {
-                calc_threads[i]->join();
-                delete calc_threads[i];
-                
-                from = to;
-                to += THREAD_MAX_BUNCHS;
-                
-                if (to > atom_pairs.size()) {
-                    to = atom_pairs.size();
-                    calc_threads[i] = new std::thread(foo, from, to, i);
-                    break;
-                }
-                else {
-                    calc_threads[i] = new std::thread(foo, from, to, i);
-                }
-            }
-        }
-    }
-                
+                    
     for (unsigned i = 0; i < n_threads; i++) {
-        if (calc_threads[i] == nullptr) {
-            break;
-        }
-        
         calc_threads[i]->join();
         delete calc_threads[i];
     }
@@ -852,11 +810,14 @@ template<typename T>
 static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
                 const std::vector<std::pair<unsigned, unsigned>> &atom_pairs,
                 Eigen::Vector<T,Eigen::Dynamic> &energy_vec,
-                const unsigned from, const unsigned to,
-                const unsigned thread_id) {
+                const unsigned thread_id, const unsigned num_threads) {
     unsigned n_atoms = atoms_molecules.size();
     
-    for (unsigned k = from; k < to; k++) {
+    for (unsigned k = 0; k < atom_pairs.size(); k++) {
+        if ((k % num_threads) != thread_id) {
+            continue;
+        }
+        
         unsigned i = atom_pairs[k].first;
         unsigned j = atom_pairs[k].second;
         
@@ -883,56 +844,16 @@ T System<T>::SystemEnergy() {
     
     auto foo = std::bind(&sysThreadEnergy<T>, std::cref(atoms_molecules),
                          std::cref(atom_pairs), std::ref(energy_vec),
-                         std::placeholders::_1, std::placeholders::_2,
-                         std::placeholders::_3);
+                         std::placeholders::_1, std::placeholders::_2);
     
     unsigned to = 0;
     unsigned from = 0;
-    
+            
     for (unsigned i = 0; i < n_threads; i++) {
-        calc_threads[i] = nullptr;
+        calc_threads[i] = new std::thread(foo, i, n_threads);
     }
         
     for (unsigned i = 0; i < n_threads; i++) {
-        from = to;
-        to += THREAD_MAX_BUNCHS;
-        
-        if (to > atom_pairs.size()) {
-            to = atom_pairs.size();
-            calc_threads[i] = new std::thread(foo, from, to, i);
-            break;
-        }
-        else {
-            calc_threads[i] = new std::thread(foo, from, to, i);
-        }
-    }
-    
-    while (to < atom_pairs.size()) {
-        for (unsigned i = 0; i < n_threads; i++) {
-            if (calc_threads[i]->joinable()) {
-                calc_threads[i]->join();
-                delete calc_threads[i];
-                
-                from = to;
-                to += THREAD_MAX_BUNCHS;
-                
-                if (to > atom_pairs.size()) {
-                    to = atom_pairs.size();
-                    calc_threads[i] = new std::thread(foo, from, to, i);
-                    break;
-                }
-                else {
-                    calc_threads[i] = new std::thread(foo, from, to, i);
-                }
-            }
-        }
-    }
-    
-    for (unsigned i = 0; i < n_threads; i++) {
-        if (calc_threads[i] == nullptr) {
-            break;
-        }
-        
         calc_threads[i]->join();
         delete calc_threads[i];
     }
