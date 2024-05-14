@@ -29,6 +29,9 @@ private:
     std::vector<bool> molecules_to_print;
     std::vector<std::string> names_molecules;
     
+    std::vector<Molecule<T>*> relax_molecules;
+    std::vector<Molecule<T>*> freeze_molecules;
+    
     // This is are auxiliary vectors, and should never be return in any of the
     // interfaces of this class.
     std::vector<Atom<T>*> atoms_molecules;
@@ -99,7 +102,7 @@ public:
         SetSysParams(sys_params);
         
         T energy = SystemEnergy();
-        for (unsigned i = 0; i < molecules.size(); i++) {
+        for (unsigned i = 0; i < relax_molecules.size(); i++) {
             T aux_sum = -1.0;
             aux_sum += pow(sys_params(i*7 + 3),2);
             aux_sum += pow(sys_params(i*7 + 4),2);

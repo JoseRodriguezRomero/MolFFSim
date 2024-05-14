@@ -92,7 +92,9 @@ This program also supports system-wide geometry optimization for ensembles conta
 ```Bash
 MolFFSim <input_file> system_geom_optim
 ```
-The output format of this calculation mirrors that of a point-energy calculation. 
+The output format of this calculation mirrors that of a point-energy calculation.
+
+By default, all molecules in this calculation are moved and rotated in order to relax the system by minimizing its energy. To prevent a specific molecule from being moved and rotated, add the keyword ``FREEZE`` at the end of its row in the input file.
 
 Additionally, for this type of calculations, a backup file is printed approximately every ten seconds, with two backup files generated sequentially. Each backup file is formatted identically to an input file, allowing geometry optimizations to be resumed from either one. This sequential writing ensures a continuous availability of valid backup files, even if the program is interrupted during the backup process.
 

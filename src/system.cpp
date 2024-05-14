@@ -208,6 +208,7 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
             }
         }
         else if (line == "BEGIN MOLECULAR_SYSTEM") {
+            std::vector<bool> optim_molec;
             while (true) {
                 if (!std::getline(input_file, line)) {
                     std::cout << "\"END MOLECULAR_SYSTEM\" is missing.";
@@ -223,6 +224,11 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                 char print_opt[32];
                 char rot_opt[32];
                 double dx, dy, dz;
+                
+                bool freeze_molecule = false;
+                if (line.find("FREEZE") != std::string::npos) {
+                    freeze_molecule = true;
+                }
                 
                 if (line.find("EULER_XYZ") != std::string::npos) {
                     double thx, thy, thz;
@@ -274,16 +280,18 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     
                     molecules.back().applyRotationAndTranslation();
                     
-                    unsigned old_size = sys_params.size();
-                    sys_params.conservativeResize(old_size + 7);
-                    
-                    sys_params[old_size + 0] = dx;
-                    sys_params[old_size + 1] = dy;
-                    sys_params[old_size + 2] = dz;
-                    sys_params[old_size + 3] = molecules.back().RotQ().w();
-                    sys_params[old_size + 4] = molecules.back().RotQ().x();
-                    sys_params[old_size + 5] = molecules.back().RotQ().y();
-                    sys_params[old_size + 6] = molecules.back().RotQ().z();
+                    if (!freeze_molecule) {
+                        unsigned old_size = sys_params.size();
+                        sys_params.conservativeResize(old_size + 7);
+                        
+                        sys_params[old_size + 0] = dx;
+                        sys_params[old_size + 1] = dy;
+                        sys_params[old_size + 2] = dz;
+                        sys_params[old_size + 3] = molecules.back().RotQ().w();
+                        sys_params[old_size + 4] = molecules.back().RotQ().x();
+                        sys_params[old_size + 5] = molecules.back().RotQ().y();
+                        sys_params[old_size + 6] = molecules.back().RotQ().z();
+                    }
                 }
                 else if (line.find("QUATERNION") != std::string::npos) {
                     double qw, qx, qy, qz;
@@ -331,21 +339,39 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                     
                     molecules.back().applyRotationAndTranslation();
                     
-                    unsigned old_size = sys_params.size();
-                    sys_params.conservativeResize(old_size + 7);
-                    
-                    sys_params[old_size + 0] = dx;
-                    sys_params[old_size + 1] = dy;
-                    sys_params[old_size + 2] = dz;
-                    sys_params[old_size + 3] = qw;
-                    sys_params[old_size + 4] = qx;
-                    sys_params[old_size + 5] = qy;
-                    sys_params[old_size + 6] = qz;
+                    if (!freeze_molecule) {
+                        unsigned old_size = sys_params.size();
+                        sys_params.conservativeResize(old_size + 7);
+                        
+                        sys_params[old_size + 0] = dx;
+                        sys_params[old_size + 1] = dy;
+                        sys_params[old_size + 2] = dz;
+                        sys_params[old_size + 3] = qw;
+                        sys_params[old_size + 4] = qx;
+                        sys_params[old_size + 5] = qy;
+                        sys_params[old_size + 6] = qz;
+                    }
                 }
                 else {
                     std::cout << "Rotation representation is incorrect or is ";
                     std::cout << "missing." << std::endl;
                     exit(1);
+                }
+                
+                if (freeze_molecule) {
+                    optim_molec.push_back(false);
+                }
+                else {
+                    optim_molec.push_back(true);
+                }
+            }
+            
+            for (unsigned i = 0; i < optim_molec.size(); i++) {
+                if (optim_molec[i]) {
+                    relax_molecules.push_back(&molecules[i]);
+                }
+                else {
+                    freeze_molecules.push_back(&molecules[i]);
                 }
             }
         }
@@ -579,8 +605,8 @@ void System<T>::SetSysParams(const Eigen::Vector<T,
                              Eigen::Dynamic> &sys_params) {
     this->sys_params = sys_params;
     
-    unsigned n_atoms = molecules.size();
-    for (unsigned i = 0; i < n_atoms; i++) {
+    unsigned n_molecules = relax_molecules.size();
+    for (unsigned i = 0; i < n_molecules; i++) {
         Eigen::Vector3<T> pos;
         pos.x() = this->sys_params(i*7 + 0);
         pos.y() = this->sys_params(i*7 + 1);
@@ -593,9 +619,9 @@ void System<T>::SetSysParams(const Eigen::Vector<T,
         qr.z() = this->sys_params(i*7 + 6);
         qr.normalize();
         
-        molecules[i].setPos(pos);
-        molecules[i].setRotQ(qr);
-        molecules[i].applyRotationAndTranslation();
+        relax_molecules[i]->setPos(pos);
+        relax_molecules[i]->setRotQ(qr);
+        relax_molecules[i]->applyRotationAndTranslation();
     }
 }
 
@@ -1151,6 +1177,15 @@ void System<T>::printInputSettings(std::ostream &os) const {
                  double(molecules[i].RotQ().y()),
                  double(molecules[i].RotQ().z()));
         os << buffer;
+        
+        auto it_find = std::find(freeze_molecules.begin(),
+                                 freeze_molecules.end(),
+                                 &molecules[i]);
+        
+        if (it_find != freeze_molecules.end()) {
+            snprintf(buffer, MAX_PRINT_BUFFER_SIZE, "%15s", "FREEZE");
+            os << buffer;
+        }
         
         os << std::endl;
     }

@@ -31,7 +31,7 @@ else()
     set(EXE_LINKER_FLAGS "${EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-# Find Eigen library
+# Find OpenMP library
 find_package (OpenMP REQUIRED)
 
 # Find Eigen library
@@ -40,7 +40,7 @@ find_package (Eigen3 REQUIRED)
 # Find autodiff library
 find_package(autodiff REQUIRED)
 
-# Find liblbfgs library
+# Find libLBFGS library
 find_package(LBFGS REQUIRED)
 
 # Add /usr/local/include to the list of include directories
