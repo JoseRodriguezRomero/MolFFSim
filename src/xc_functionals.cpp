@@ -24,7 +24,8 @@
 #define FACTORIAL_20                2432902008176640000.0
 #define FACTORIAL_21                51090942171709440000.0
 
-#define APPROX_RADIUS               25.0
+// Solve for x "log(1-erf(sqrt(x)))/log(10) = -12"
+#define APPROX_RADIUS               25.4220809376487
 
 #include "xc_functionals.hpp"
 
@@ -235,6 +236,8 @@ T MolFFSim::NaiveModelE(const double lambda, const T &dist) {
 template<typename T>
 T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
     if ((lambda*dist*dist) >= APPROX_RADIUS) {
+        // If this is true then the naive potential part can be approximated
+        // as 1/r. Therefore, its Laplacian must be approximately zero.
         return T(0.0);
     }
     
@@ -279,6 +282,8 @@ T MolFFSim::XCSpheSymm(const double lambda, const T &dist) {
 template<typename T>
 T MolFFSim::XCCylinSymm(const double lambda, const T &dist) {
     if ((lambda*dist*dist) >= APPROX_RADIUS) {
+        // If this is true then the naive potential part can be approximated
+        // as 1/r. Therefore, its Laplacian must be approximately zero.
         return T(0.0);
     }
     
