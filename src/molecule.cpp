@@ -683,7 +683,7 @@ static void sysSelfEnergy(const std::vector<Atom<T>> &atoms_rot,
 }
 
 template<typename T>
-T Molecule<T>::SelfEnergy() {
+T Molecule<T>::SelfEnergy() const {
     Polarize();
     
     unsigned n_threads = std::thread::hardware_concurrency();
@@ -781,7 +781,7 @@ static void matThreadPol(const std::vector<Atom<T>> &atoms,
 }
 
 template<typename T>
-void Molecule<T>::Polarize() {
+void Molecule<T>::Polarize() const {
     unsigned n_atoms = atoms_rot.size();
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
         pol_mat(n_atoms+1,n_atoms+1);
@@ -852,7 +852,6 @@ template<>
 Eigen::Vector<autodiff::dual,Eigen::Dynamic>
 Molecule<autodiff::dual>::GradEnergyFromCoords(
     const Eigen::Vector<autodiff::dual, Eigen::Dynamic> &at_coords) {
-    Eigen::Vector<autodiff::dual,Eigen::Dynamic> grad(at_coords.size());
     Eigen::Vector<autodiff::dual,Eigen::Dynamic> coords(at_coords.size());
     
     auto foo = std::bind(&Molecule<autodiff::dual>::EnergyFromCoords,
@@ -864,12 +863,7 @@ Molecule<autodiff::dual>::GradEnergyFromCoords(
         coords(i*3 + 2) = atoms_rot[i].Pos().z();
     }
     
-    for (unsigned i = 0; i < coords.size(); i++) {
-        grad(i) = derivative(foo, autodiff::wrt(coords(i)),
-                             autodiff::at(coords));
-    }
-    
-    return grad;
+    return gradient(foo, autodiff::wrt(coords), autodiff::at(coords));
 }
 
 static int GeomOptimProgress(void *instance, 

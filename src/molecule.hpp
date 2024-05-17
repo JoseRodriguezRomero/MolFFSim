@@ -15,7 +15,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <autodiff/forward/dual.hpp>
+#include <autodiff/forward/real.hpp>
+#include <autodiff/forward/dual/eigen.hpp>
 
 #include "auxiliary_functions.hpp"
 #include "xc_functionals.hpp"
@@ -166,8 +167,8 @@ public:
 template <typename T>
 class Molecule {
 private:
-    std::vector<Atom<T>> atoms_rot;     // Totated and translated.
-    std::vector<Atom<double>> atoms;    // Unrotated and untranslated.
+    mutable std::vector<Atom<T>> atoms_rot;     // Totated and translated.
+    std::vector<Atom<double>> atoms;            // Unrotated and untranslated.
     
     Eigen::Vector3<T> center_r;         // Position (center).
     Eigen::Vector3<T> center_v;         // Velocity (center).
@@ -262,15 +263,16 @@ public:
     void setFullE();
     
     T InteractionEnergy(const Molecule &other) const;
-    T SelfEnergy();     // Pay attention when invoking this, it will set its
-                        // polarization coefficients to their monomer values.
+    T SelfEnergy() const;   // Pay attention when invoking this, it will set
+                            // its polarization coefficients to their monomer
+                            // values.
     
     void setAnglesXYZ(const T &th_x, const T &th_y, const T &th_z);
     
     // Computes the polarization coefficients of each atom as if the moelcule
     // were perfectly isolated. This is meant for the isolated monomer energy
     // calculations.
-    void Polarize();
+    void Polarize() const;
     
     void operator=(const Molecule& other);
     bool operator==(const Molecule& other) const;

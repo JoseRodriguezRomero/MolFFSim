@@ -412,6 +412,16 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
             molecule_instances[molec_name]++;
         }
     }
+    
+    unsigned n_atoms = atoms_molecules.size();
+    pol_mat =
+        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(n_atoms+1,n_atoms+1);
+    
+    unsigned n_threads = std::thread::hardware_concurrency();
+    aux_vec_mat =
+        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(n_atoms+1, n_threads);
+    
+    energy_vec = Eigen::Vector<T,Eigen::Dynamic>(n_threads);
 }
 
 template<typename T>
@@ -631,17 +641,12 @@ System<autodiff::dual>::GradEnergyFromParams(const Eigen::Vector<autodiff::dual,
                                              Eigen::Dynamic> &sys_params) {
     SetSysParams(sys_params);
     unsigned num_params = sys_params.size();
-    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
     
     auto foo = std::bind(&MolFFSim::System<autodiff::dual>::EnergyFromParams,
                          this, std::placeholders::_1);
-    
-    for (unsigned i = 0; i < num_params; i++) {
-        gradient[i] = derivative(foo, autodiff::wrt(this->sys_params(i)),
-                                 autodiff::at(this->sys_params));
-    }
-    
-    return gradient;
+        
+    return gradient(foo, autodiff::wrt(this->sys_params),
+                    autodiff::at(this->sys_params));
 }
 
 template<typename T>
@@ -786,14 +791,9 @@ static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
 }
 
 template<typename T>
-void System<T>::PolarizeMolecules() {
+void System<T>::PolarizeMolecules() const {
     unsigned n_atoms = atoms_molecules.size();
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
-        pol_mat(n_atoms+1,n_atoms+1);
-    
     unsigned n_threads = std::thread::hardware_concurrency();
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
-        aux_vec_mat(n_atoms+1, n_threads);
     
     pol_mat.setZero();
     aux_vec_mat.setZero();
@@ -804,14 +804,12 @@ void System<T>::PolarizeMolecules() {
                      aux_vec_mat, i, n_threads);
     }
                 
-    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
+    Eigen::Vector<T,Eigen::Dynamic> vec_mat(std::move(aux_vec_mat.rowwise().sum()));
     vec_mat(n_atoms) += system_charge;
     
 #ifdef _OPENMP
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    Eigen::PartialPivLU<Eigen::Matrix<T,
-        Eigen::Dynamic,Eigen::Dynamic>> lu_decomp(pol_mat);
-    pol_coeffs = lu_decomp.solve(vec_mat);
+    Eigen::Matrix<T,Eigen::Dynamic,1> 
+        pol_coeffs(std::move(pol_mat.lu().solve(vec_mat)));
 #else
     Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
     pol_coeffs = pol_mat.ldlt().solve(vec_mat);
@@ -847,13 +845,12 @@ static void sysThreadEnergy(const std::vector<Atom<T>*> &atoms_molecules,
 }
 
 template<typename T>
-T System<T>::SystemEnergy() {
+T System<T>::SystemEnergy() const {
     PolarizeMolecules();
     
     unsigned n_threads = std::thread::hardware_concurrency();
-    Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
     energy_vec.setZero();
-        
+    
     #pragma omp parallel for
     for (unsigned i = 0; i < n_threads; i++) {
         sysThreadEnergy(atoms_molecules, atom_pairs, energy_vec, 
@@ -864,18 +861,18 @@ T System<T>::SystemEnergy() {
 }
 
 template<typename T>
-T System<T>::SystemInteractionEnergy() {
+T System<T>::SystemInteractionEnergy() const {
     T energy = SystemEnergy();
     
     for (std::string molec_name : names_molecules) {
-        energy -= monomer_energies[molec_name];
+        energy -= monomer_energies.at(molec_name);
     }
     
     return energy;
 }
 
 template<typename T>
-void System<T>::MonomerPolarizeMolecules() {
+void System<T>::MonomerPolarizeMolecules() const {
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
         it->second.Polarize();
     }
@@ -1030,6 +1027,7 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     lbfgs_parameter_init(&param);
         
     param.m = 1500;
+    param.epsilon = 1.0E-7;
     
     auto t0 = std::chrono::steady_clock::now();
     

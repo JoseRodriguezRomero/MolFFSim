@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include <autodiff/forward/dual.hpp>
+#include <autodiff/forward/dual/eigen.hpp>
 
 #include "auxiliary_functions.hpp"
 #include "molecule.hpp"
@@ -25,7 +26,7 @@ template<typename T>
 class System {
 private:
     // All the molecules in the system.
-    std::vector<Molecule<T>> molecules;
+    mutable std::vector<Molecule<T>> molecules;
     std::vector<bool> molecules_to_print;
     std::vector<std::string> names_molecules;
     
@@ -71,6 +72,10 @@ private:
     std::string backup_filename1;
     std::string backup_filename2;
     std::chrono::steady_clock::time_point backup_clock;
+    
+    mutable Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> pol_mat;
+    mutable Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> aux_vec_mat;
+    mutable Eigen::Vector<T,Eigen::Dynamic> energy_vec;
     
 public:
     System();
@@ -147,17 +152,17 @@ public:
         
     // Use this for system-wide a geometry optimization, and point-energy
     // calculations of the system as a whole.
-    void PolarizeMolecules();
+    void PolarizeMolecules() const;
 
-    T SystemEnergy();
-    T SystemInteractionEnergy();
+    T SystemEnergy() const;
+    T SystemInteractionEnergy() const;
     
     std::vector<std::string> ListMoleculeTypes() const;
     unsigned MoleculeInstances(const std::string &molec_name) const;
     double MoleculeMonomerEnergy(const std::string &molec_name) const;
     
     // Use this to optimize the isolated (monomer) geometry of the molecules.
-    void MonomerPolarizeMolecules();
+    void MonomerPolarizeMolecules() const;
     void getMonomerEnergies();
     
     void setPeriodic(const std::vector<bool> &is_periodic);
