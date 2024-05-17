@@ -669,18 +669,12 @@ System<autodiff::dual>::GradEnergyFromAtomsCoords(
                                         Eigen::Dynamic> &atom_coords) {
     SetAtomsCoords(atom_coords);
     unsigned num_params = atom_coords.size();
-    Eigen::Vector<autodiff::dual, Eigen::Dynamic> gradient(num_params);
     
     auto foo = std::bind(&System<autodiff::dual>::EnergyFromAtomsCoords,
                          this, std::placeholders::_1);
     
-    for (unsigned i = 0; i < num_params; i++) {
-        Eigen::Vector<autodiff::dual, Eigen::Dynamic> coords = atom_coords;
-        gradient[i] = derivative(foo, autodiff::wrt(coords(i)),
-                                 autodiff::at(coords));
-    }
-    
-    return gradient;
+    Eigen::Vector<autodiff::dual, Eigen::Dynamic> coords = atom_coords;
+    return gradient(foo, autodiff::wrt(coords), autodiff::at(coords));
 }
 
 template<>
