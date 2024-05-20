@@ -794,19 +794,17 @@ void System<T>::PolarizeMolecules() const {
             
     #pragma omp parallel for
     for (unsigned i = 0; i < n_threads; i++) {
-        matThreadPol(atoms_molecules, atom_pairs, pol_mat, 
+        matThreadPol(atoms_molecules, atom_pairs, pol_mat,
                      aux_vec_mat, i, n_threads);
     }
                 
-    Eigen::Vector<T,Eigen::Dynamic> vec_mat(std::move(aux_vec_mat.rowwise().sum()));
+    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum());
     vec_mat(n_atoms) += system_charge;
     
 #ifdef _OPENMP
-    Eigen::Matrix<T,Eigen::Dynamic,1> 
-        pol_coeffs(std::move(pol_mat.lu().solve(vec_mat)));
+    eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
 #else
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
 #endif
     
     for (unsigned i = 0; i < n_atoms; i++) {
