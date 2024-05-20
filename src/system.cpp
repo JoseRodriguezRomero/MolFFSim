@@ -798,13 +798,13 @@ void System<T>::PolarizeMolecules() const {
                      aux_vec_mat, i, n_threads);
     }
                 
-    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum());
+    Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
     
 #ifdef _OPENMP
-    eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
 #else
-    eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
 #endif
     
     for (unsigned i = 0; i < n_atoms; i++) {

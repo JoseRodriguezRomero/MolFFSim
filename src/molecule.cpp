@@ -801,9 +801,12 @@ void Molecule<T>::Polarize() const {
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     
-    Eigen::Matrix<T,Eigen::Dynamic,1> pol_coeffs;
-    pol_coeffs = pol_mat.ldlt().solve(vec_mat);
-    
+#ifdef _OPENMP
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
+#else
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+#endif
+        
     for (unsigned i = 0; i < n_atoms; i++) {
         atoms_rot[i].setPolCoeff(pol_coeffs(i));
     }
