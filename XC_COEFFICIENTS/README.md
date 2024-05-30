@@ -21,9 +21,9 @@ where $\rho_a, \rho_b \in L^1 \left( \mathbb{R^3} \right)$ are the non-interacti
 To accommodate partial charge transfer between the atoms, the valence electron contributions of the non-interacting ground state eigendensities of each atom are scaled by a polarization scalar. These scalars are determined by minimizing a function identical in form to the energy calculation formula, subject to the constraint that the integral of the densities remains equal to the total number of electrons in the entire system. Additionally, the exchange and correlation coefficients used in the minimization problem differ from those used to compute the energies, resulting in a total of eight fitted parameters to account for exchange and correlation.
 
  * `ecp_collection_1`
-   * **Reference:** [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
+   * **Reference:** [*J. Chem. Phys.* Accepted (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
    * **Fitted with:** The atomic basis functions in `ecp_collection_1`.
 
  * `fulle_collection_1`
-   * **Reference:** [*J. Chem. Phys.* In review (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
+   * **Reference:** [*J. Chem. Phys.* Accepted (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
    * **Fitted with:** The atomic basis functions in `fulle_collection_1`.
