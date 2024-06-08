@@ -915,7 +915,8 @@ static lbfgsfloatval_t GeomOptimEvaluate(void *instance,
 }
 
 template<>
-int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
+int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os,
+                                    const lbfgs_parameter_t &lbfgs_settings) {
     setPos(Eigen::Vector3<autodiff::dual>(0.0, 0.0, 0.0));
     setAnglesXYZ(0.0, 0.0, 0.0);
     
@@ -931,19 +932,17 @@ int Molecule<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     int ret = 0;
     lbfgsfloatval_t fx;
     lbfgsfloatval_t *x = lbfgs_malloc(N);
-    lbfgs_parameter_t param;
     
     for (unsigned i = 0; i < atoms_rot.size(); i++) {
         x[3*i + 0] = lbfgsfloatval_t(atoms_rot[i].Pos().x());
         x[3*i + 1] = lbfgsfloatval_t(atoms_rot[i].Pos().y());
         x[3*i + 2] = lbfgsfloatval_t(atoms_rot[i].Pos().z());
     }
-                                     
-    // Initialize the parameters for the L-BFGS optimization.
-    lbfgs_parameter_init(&param);
-    
+                                         
     output_stream = &os;
-    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
+    lbfgs_parameter_t params = lbfgs_settings;
+    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, 
+                this, &params);
     lbfgs_free(x);
     
     os << "Molecule geometry optimization done!" << std::endl;
@@ -956,22 +955,7 @@ template <typename T>
 std::ostream& operator<<(std::ostream &os, 
                          const MolFFSim::Molecule<T> &molec) {
     char buffer[MAX_PRINT_BUFFER_SIZE];
-    
-//    for (int i = 0; i < 112; i++) {
-//        os << "-";
-//    }
-//    os << std::endl;
-//    
-//    snprintf(buffer, MAX_PRINT_BUFFER_SIZE,"%12s %25s %25s %25s %25s",
-//             "Element","x [Angstrom]","y [Angstrom]","z [Angstrom]",
-//             "Partial charge");
-//    os << buffer << std::endl;
-//    
-//    for (int i = 0; i < 116; i++) {
-//        os << "-";
-//    }
-//    os << std::endl;
-    
+        
     // Print the data.
     auto it_end = molec.const_AtomsRotAndTrans().cend();
     auto it_begin = molec.const_AtomsRotAndTrans().cbegin();
@@ -986,10 +970,6 @@ std::ostream& operator<<(std::ostream &os,
         os << buffer << std::endl;
     }
     
-//    for (int i = 0; i < 112; i++) {
-//        os << "-";
-//    }
-//    os << std::endl;
     return os;
 }
 

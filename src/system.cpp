@@ -11,6 +11,22 @@
 #define BOHR_TO_ANGSTROM            0.529177249
 #define HARTREE_TO_KJ_MOL           2625.5002
 
+#define DEFAULT_LBFGS_M                     1500
+#define DEFAULT_LBFGS_EPSILON               1.0E-7
+#define DEFAULT_LBFGS_PAST                  0
+#define DEFAULT_LBFGS_DELTA                 0
+#define DEFAULT_LBFGS_MAX_ITERATIONS        0
+#define DEFAULT_LBFGS_LINESEARCH            LBFGS_LINESEARCH_DEFAULT
+#define DEFAULT_LBFGS_MIN_STEP              1.0E-20
+#define DEFAULT_LBFGS_MAX_STEP              1.0E+20
+#define DEFAULT_LBFGS_FTOL                  1.0E-4
+#define DEFAULT_LBFGS_WOLFE                 0.9
+#define DEFAULT_LBFGS_GTOL                  0.9
+#define DEFAULT_LBFGS_XTOL                  0.0
+#define DEFAULT_LBFGS_ORTHANTWISE_C         0.0
+#define DEFAULT_LBFGS_ORTHANTWISE_START     0
+#define DEFAULT_LBFGS_ORTHANTWISE_END       0
+
 #include "system.hpp"
 
 using namespace MolFFSim;
@@ -20,6 +36,24 @@ System<T>::System() {
     is_periodic = DEFAULT_IS_PERIODIC;
     box_side_len = DEFAULT_PERIODIC_SIZES;
     system_charge = 0;
+    
+    lbfgs_parameter_init(&lbfgs_settings);
+    
+    lbfgs_settings.m                    = DEFAULT_LBFGS_M;
+    lbfgs_settings.epsilon              = DEFAULT_LBFGS_EPSILON;
+    lbfgs_settings.past                 = DEFAULT_LBFGS_PAST;
+    lbfgs_settings.delta                = DEFAULT_LBFGS_DELTA;
+    lbfgs_settings.max_iterations       = DEFAULT_LBFGS_MAX_ITERATIONS;
+    lbfgs_settings.linesearch           = DEFAULT_LBFGS_LINESEARCH;
+    lbfgs_settings.min_step             = DEFAULT_LBFGS_MIN_STEP;
+    lbfgs_settings.max_step             = DEFAULT_LBFGS_MAX_STEP;
+    lbfgs_settings.ftol                 = DEFAULT_LBFGS_FTOL;
+    lbfgs_settings.wolfe                = DEFAULT_LBFGS_WOLFE;
+    lbfgs_settings.gtol                 = DEFAULT_LBFGS_GTOL;
+    lbfgs_settings.xtol                 = DEFAULT_LBFGS_XTOL;
+    lbfgs_settings.orthantwise_c        = DEFAULT_LBFGS_ORTHANTWISE_C;
+    lbfgs_settings.orthantwise_start    = DEFAULT_LBFGS_ORTHANTWISE_START;
+    lbfgs_settings.orthantwise_end      = DEFAULT_LBFGS_ORTHANTWISE_END;
 }
 
 template<typename T>
@@ -372,6 +406,108 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
                 }
                 else {
                     freeze_molecules.push_back(&molecules[i]);
+                }
+            }
+        }
+        else if (line == "BEGIN OPTIMIZER_SETTINGS") {
+            while (true) {
+                if (!std::getline(input_file, line)) {
+                    std::cout << "\"END OPTIMIZER_SETTINGS\" is missing.";
+                    std::cout << std::endl;
+                    exit(1);
+                }
+                
+                if (line == "END OPTIMIZER_SETTINGS") {
+                    break;
+                }
+                
+                char label[256];
+                if (line.find("lbfgs_m_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %d",
+                           label, &(lbfgs_settings.m));
+                }
+                else if (line.find("lbfgs_epsilon_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.epsilon));
+                }
+                else if (line.find("lbfgs_past_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %d",
+                           label, &(lbfgs_settings.past));
+                }
+                else if (line.find("lbfgs_delta_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.delta));
+                }
+                else if (line.find("lbfgs_max_iterations_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %d",
+                           label, &(lbfgs_settings.max_iterations));
+                }
+                else if (line.find("lbfgs_linesearch_") != std::string::npos) {
+                    char linesearch_method[256] = "AAA";
+                    sscanf(line.c_str(), "%s %s", label, linesearch_method);
+                    
+                    if (!strcmp("LBFGS_LINESEARCH_DEFAULT",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_DEFAULT;
+                    }
+                    else if (!strcmp("LBFGS_LINESEARCH_MORETHUENTE",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_MORETHUENTE;
+                    }
+                    else if (!strcmp("LBFGS_LINESEARCH_BACKTRACKING_ARMIJO",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_BACKTRACKING_ARMIJO;
+                    }
+                    else if (!strcmp("LBFGS_LINESEARCH_BACKTRACKING",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_BACKTRACKING;
+                    }
+                    else if (!strcmp("LBFGS_LINESEARCH_BACKTRACKING_WOLFE",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_BACKTRACKING_WOLFE;
+                    }
+                    else if (!strcmp("LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE",linesearch_method)) {
+                        lbfgs_settings.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
+                    }
+                    else {
+                        std::cout << "Invalid Optimizer setting." << std::endl;
+                        exit(1);
+                    }
+                }
+                else if (line.find("lbfgs_min_step_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.min_step));
+                }
+                else if (line.find("lbfgs_max_step_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.max_step));
+                }
+                else if (line.find("lbfgs_ftol_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.ftol));
+                }
+                else if (line.find("lbfgs_wolfe_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.wolfe));
+                }
+                else if (line.find("lbfgs_gtol_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.gtol));
+                }
+                else if (line.find("lbfgs_xtol_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.xtol));
+                }
+                else if (line.find("lbfgs_orthantwise_c_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %lf",
+                           label, &(lbfgs_settings.orthantwise_c));
+                }
+                else if (line.find("lbfgs_orthantwise_start_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %d",
+                           label, &(lbfgs_settings.orthantwise_start));
+                }
+                else if (line.find("lbfgs_orthantwise_end_") != std::string::npos) {
+                    sscanf(line.c_str(), "%s %d",
+                           label, &(lbfgs_settings.orthantwise_end));
+                }
+                else {
+                    std::cout << "Invalid Optimizer setting." << std::endl;
+                    exit(1);
                 }
             }
         }
@@ -1009,23 +1145,17 @@ int  System<autodiff::dual>::OptimizeGeometry(std::ostream &os) {
     int ret = 0;
     lbfgsfloatval_t fx;
     lbfgsfloatval_t *x = lbfgs_malloc(N);
-    lbfgs_parameter_t param;
     
     for (int i = 0; i < N; i++) {
         x[i] = lbfgsfloatval_t(sys_params(i));
     }
-                                 
-    // Initialize the parameters for the L-BFGS optimization.
-    lbfgs_parameter_init(&param);
-        
-    param.m = 1500;
-    param.epsilon = 1.0E-7;
-    
+                                     
     auto t0 = std::chrono::steady_clock::now();
     
     output_stream = &os;
     backup_clock = std::chrono::steady_clock::now();
-    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress, this, &param);
+    ret = lbfgs(N, x, &fx, GeomOptimEvaluate, GeomOptimProgress,
+                this, &lbfgs_settings);
     lbfgs_free(x);
     
     auto t1 = std::chrono::steady_clock::now();
@@ -1049,7 +1179,7 @@ int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
         os << "Begining optimization of: \"" << it->first << "\"";
         os << std::endl << std::endl;
         
-        it->second.OptimizeGeometry(os);
+        it->second.OptimizeGeometry(os, lbfgs_settings);
         
         char buffer[MAX_PRINT_BUFFER_SIZE];
         for (int i = 0; i < 112; i++) {

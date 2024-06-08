@@ -77,6 +77,8 @@ private:
     mutable Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> aux_vec_mat;
     mutable Eigen::Vector<T,Eigen::Dynamic> energy_vec;
     
+    lbfgs_parameter_t lbfgs_settings;
+    
 public:
     System();
     ~System();

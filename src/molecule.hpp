@@ -282,7 +282,8 @@ public:
     Eigen::Vector<T,Eigen::Dynamic>
         GradEnergyFromCoords(const Eigen::Vector<T,Eigen::Dynamic> &at_coords);
     
-    int OptimizeGeometry(std::ostream &os);
+    int OptimizeGeometry(std::ostream &os,
+                         const lbfgs_parameter_t &lbfgs_settings);
     inline std::ostream& OStream() { return *output_stream; }
 };
 

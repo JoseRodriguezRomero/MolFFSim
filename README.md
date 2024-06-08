@@ -98,6 +98,14 @@ By default, all molecules in this calculation are moved and rotated in order to 
 
 Additionally, for this type of calculations, a backup file is printed approximately every ten seconds, with two backup files generated sequentially. Each backup file is formatted identically to an input file, allowing geometry optimizations to be resumed from either one. This sequential writing ensures a continuous availability of valid backup files, even if the program is interrupted during the backup process.
 
+### LBFGS Settings
+
+As previously mentioned, all non-linear optimization problems are managed using [libLBFGS](https://www.chokkan.org/software/liblbfgs/). This library allows for the adjustment of various algorithm parameters and the selection of different line search algorithms.
+
+You can specify arbitrary values for these settings in the `OPTIMIZER_SETTINGS` section of the input file. This section is optional; if omitted, the default values will be used. Refer to `input_sample_3.txt` for these default settings.
+
+For detailed information about each parameter, consult the [libLBFGS documentation](https://www.chokkan.org/software/liblbfgs/structlbfgs__parameter__t.html).
+
 ## Automatic differentiation
 To model the [Mulliken charges](https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Book%3A_Quantum_States_of_Atoms_and_Molecules_(Zielinksi_et_al)/10%3A_Theories_of_Electronic_Molecular_Structure/10.07%3A_Mulliken_Populations) of a molecular system, a fictitious self-energy functional is minimized. This functional mirrors the form of the functional used for modeling the system energy. Minimizing this problem simplifies to minimizing a quadratic function, thus solving a system of linear equations. The size of this system scales linearly with the number of atoms in the system.
 

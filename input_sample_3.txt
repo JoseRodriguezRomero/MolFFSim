@@ -29,3 +29,20 @@ H2O     PRINT         EULER_XYZ       4.5000000000     -3.5000000000      4.5000
 H2O     PRINT         EULER_XYZ       4.5000000000     -3.5000000000     -4.5000000000      0.0000000000     45.0000000000      0.0000000000
 END MOLECULAR_SYSTEM
 
+BEGIN OPTIMIZER_SETTINGS
+lbfgs_m_                    1500
+lbfgs_epsilon_              1.0E-7
+lbfgs_past_                 0
+lbfgs_delta_                1.0E-5
+lbfgs_max_iterations_       0
+lbfgs_linesearch_           LBFGS_LINESEARCH_DEFAULT
+lbfgs_min_step_             1.0E-20
+lbfgs_max_step_             1.0E+20
+lbfgs_ftol_                 1.0E-4
+lbfgs_wolfe_                0.9
+lbfgs_gtol_                 0.9
+lbfgs_xtol_                 0.0
+lbfgs_orthantwise_c_        0.0
+lbfgs_orthantwise_start_    0
+lbfgs_orthantwise_end_      0
+END OPTIMIZER_SETTINGS
