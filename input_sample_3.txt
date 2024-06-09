@@ -1,3 +1,4 @@
+n_cores              6
 system_charge        0
 is_periodic          false false false
 periodic_box_sizes   300 300 300

@@ -6,7 +6,6 @@
 
 #include <cmath>
 #include <chrono>
-#include <thread>
 #include <vector>
 #include <string>
 #include <utility>
@@ -65,8 +64,8 @@ private:
     
     unsigned system_charge;
     
+    unsigned n_cores;
     Eigen::Vector<T,Eigen::Dynamic> sys_params;
-    const std::thread::id t_id = std::this_thread::get_id();
     
     std::ostream *output_stream;
     std::string backup_filename1;

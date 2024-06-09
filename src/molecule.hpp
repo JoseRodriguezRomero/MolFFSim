@@ -7,7 +7,6 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include <thread>
 #include <utility>
 #include <algorithm>
 #include <unordered_map>
@@ -180,6 +179,7 @@ private:
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
     
+    unsigned n_cores;
     std::ostream *output_stream;
     
     std::vector<std::pair<unsigned, unsigned>> atom_pairs;
@@ -284,7 +284,11 @@ public:
     
     int OptimizeGeometry(std::ostream &os,
                          const lbfgs_parameter_t &lbfgs_settings);
-    inline std::ostream& OStream() { return *output_stream; }
+    inline std::ostream& OStream() { return *output_stream; };
+    inline unsigned NumCores() const { return n_cores; };
+    inline void setNumCores(const unsigned n_cores) {
+        this->n_cores = n_cores;
+    }
 };
 
 }

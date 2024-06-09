@@ -482,6 +482,8 @@ Molecule<T>::Molecule() {
     center_qv.y() = DEFAULT_MOLECULE_Q3_VEL;
     center_qv.z() = DEFAULT_MOLECULE_Q4_VEL;
     
+    n_cores = 1;
+    
     is_periodic = DEFAULT_IS_PERIODIC;
     box_side_len = DEFAULT_PERIODIC_SIZES;
 }
@@ -686,14 +688,13 @@ template<typename T>
 T Molecule<T>::SelfEnergy() const {
     Polarize();
     
-    unsigned n_threads = std::thread::hardware_concurrency();
-    Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_threads);
+    Eigen::Vector<T,Eigen::Dynamic> energy_vec(n_cores);
     energy_vec.setZero();
         
     #pragma omp parallel for
-    for (unsigned i = 0; i < n_threads; i++) {
-        sysSelfEnergy(atoms_rot, atom_pairs, energy_vec, 
-                      i, n_threads);
+    for (unsigned i = 0; i < n_cores; i++) {
+        sysSelfEnergy(atoms_rot, atom_pairs, energy_vec,
+                      i, n_cores);
     }
             
     return energy_vec.sum();
@@ -786,23 +787,28 @@ void Molecule<T>::Polarize() const {
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
         pol_mat(n_atoms+1,n_atoms+1);
     
-    unsigned n_threads = std::thread::hardware_concurrency();
     Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
-        aux_vec_mat(n_atoms+1, n_threads);
+        aux_vec_mat(n_atoms+1, n_cores);
         
     pol_mat.setZero();
     aux_vec_mat.setZero();
         
     #pragma omp parallel for
-    for (unsigned i = 0; i < n_threads; i++) {
-        matThreadPol(atoms_rot, atom_pairs, pol_mat, aux_vec_mat, 
-                     i, n_threads);
+    for (unsigned i = 0; i < n_cores; i++) {
+        matThreadPol(atoms_rot, atom_pairs, pol_mat, aux_vec_mat,
+                     i, n_cores);
     }
         
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
-    
+        
 #ifdef _OPENMP
-    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs;
+    if (n_cores > 1) {
+        pol_coeffs = pol_mat.lu().solve(vec_mat);
+    }
+    else {
+        pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    }
 #else
     Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
 #endif

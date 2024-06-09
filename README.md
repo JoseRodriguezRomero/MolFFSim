@@ -38,6 +38,7 @@ To run this program without errors at least the name of an existing input file h
 The structure of an input files can be separated in three main parts, that we will now describe.
 
 #### 1. System Configuration
+ * `n_cores` Specifies the number of CPU cores to be used.
  * `system_charge` Specifies the overall charge of the system.
  * `is_periodic` Indicates whether the system is periodic or not, with three boolean values representing periodicity along the *x*, *y*, and *z* axes respectively.
  * `periodic_box_sizes` Specifies the length of the sides of the periodic box (in Ångström), centered at the origin, along the *x*, *y*, and *z* axes.

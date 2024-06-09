@@ -3,8 +3,6 @@
 
 #include <string>
 
-#include "lbfgs.h"
-
 namespace MolFFSim {
 
 std::string LabelFromAtomicNumber(const unsigned atomic_number);

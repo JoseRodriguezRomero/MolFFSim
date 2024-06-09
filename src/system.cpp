@@ -36,6 +36,7 @@ System<T>::System() {
     is_periodic = DEFAULT_IS_PERIODIC;
     box_side_len = DEFAULT_PERIODIC_SIZES;
     system_charge = 0;
+    n_cores = 1;
     
     lbfgs_parameter_init(&lbfgs_settings);
     
@@ -77,7 +78,27 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
     
     std::string line;
     while (std::getline(input_file, line)) {
-        if (line.find("system_charge") != std::string::npos) {
+        if (line.find("n_cores") != std::string::npos) {
+            char dummy[64];
+            int valid_args = sscanf(line.c_str(),"%s %ud", dummy, &n_cores);
+            
+            if (valid_args != 2) {
+                std::cout << "Incorrect arguments for \"n_cores\".";
+                std::cout << std::endl;
+                exit(1);
+            }
+            
+            if (n_cores < 1) {
+                n_cores = 1;
+            }
+            
+            std::cout << "Number of cores: " << n_cores << std::endl;
+            
+            omp_set_num_threads(n_cores);
+            Eigen::setNbThreads(n_cores);
+            Eigen::initParallel();
+        }
+        else if (line.find("system_charge") != std::string::npos) {
             char dummy[64];
             int valid_args = sscanf(line.c_str(),"%s %ud", dummy,
                                     &system_charge);
@@ -553,11 +574,10 @@ void System<T>::ReadInputFile(std::ifstream &input_file) {
     pol_mat =
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(n_atoms+1,n_atoms+1);
     
-    unsigned n_threads = std::thread::hardware_concurrency();
     aux_vec_mat =
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(n_atoms+1, n_threads);
+        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>(n_atoms+1, n_cores);
     
-    energy_vec = Eigen::Vector<T,Eigen::Dynamic>(n_threads);
+    energy_vec = Eigen::Vector<T,Eigen::Dynamic>(n_cores);
 }
 
 template<typename T>
@@ -923,22 +943,27 @@ static void matThreadPol(const std::vector<Atom<T>*> &atoms_molecules,
 template<typename T>
 void System<T>::PolarizeMolecules() const {
     unsigned n_atoms = atoms_molecules.size();
-    unsigned n_threads = std::thread::hardware_concurrency();
     
     pol_mat.setZero();
     aux_vec_mat.setZero();
             
     #pragma omp parallel for
-    for (unsigned i = 0; i < n_threads; i++) {
+    for (unsigned i = 0; i < n_cores; i++) {
         matThreadPol(atoms_molecules, atom_pairs, pol_mat,
-                     aux_vec_mat, i, n_threads);
+                     aux_vec_mat, i, n_cores);
     }
                 
     Eigen::Vector<T,Eigen::Dynamic> vec_mat = aux_vec_mat.rowwise().sum();
     vec_mat(n_atoms) += system_charge;
     
 #ifdef _OPENMP
-    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.lu().solve(vec_mat);
+    Eigen::Vector<T,Eigen::Dynamic> pol_coeffs;
+    if (n_cores > 1) {
+        pol_coeffs = pol_mat.lu().solve(vec_mat);
+    }
+    else {
+        pol_coeffs = pol_mat.ldlt().solve(vec_mat);
+    }
 #else
     Eigen::Vector<T,Eigen::Dynamic> pol_coeffs = pol_mat.ldlt().solve(vec_mat);
 #endif
@@ -976,13 +1001,11 @@ template<typename T>
 T System<T>::SystemEnergy() const {
     PolarizeMolecules();
     
-    unsigned n_threads = std::thread::hardware_concurrency();
     energy_vec.setZero();
     
     #pragma omp parallel for
-    for (unsigned i = 0; i < n_threads; i++) {
-        sysThreadEnergy(atoms_molecules, atom_pairs, energy_vec, 
-                        i, n_threads);
+    for (unsigned i = 0; i < n_cores; i++) {
+        sysThreadEnergy(atoms_molecules, atom_pairs, energy_vec, i, n_cores);
     }
     
     return energy_vec.sum();
@@ -1179,6 +1202,7 @@ int System<autodiff::dual>::OptimizeMoleculeGeometries(std::ostream &os) {
         os << "Begining optimization of: \"" << it->first << "\"";
         os << std::endl << std::endl;
         
+        it->second.setNumCores(n_cores);
         it->second.OptimizeGeometry(os, lbfgs_settings);
         
         char buffer[MAX_PRINT_BUFFER_SIZE];
