@@ -1012,17 +1012,6 @@ T System<T>::SystemEnergy() const {
 }
 
 template<typename T>
-T System<T>::SystemInteractionEnergy() const {
-    T energy = SystemEnergy();
-    
-    for (std::string molec_name : names_molecules) {
-        energy -= monomer_energies.at(molec_name);
-    }
-    
-    return energy;
-}
-
-template<typename T>
 void System<T>::MonomerPolarizeMolecules() const {
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
         it->second.Polarize();
@@ -1035,7 +1024,12 @@ void System<T>::getMonomerEnergies() {
     monomer_energies.clear();
     
     for (auto it = molecule_list.begin(); it != molecule_list.end(); it++) {
-        monomer_energies[it->first] =  double(it->second.SelfEnergy());
+        monomer_energies[it->first] = double(it->second.SelfEnergy());
+    }
+    
+    uncorr_energy = 0.0;
+    for (std::string molec_name : names_molecules) {
+        uncorr_energy += monomer_energies[molec_name];
     }
 }
 
@@ -1118,11 +1112,11 @@ static int GeomOptimProgress(void *instance, const lbfgsfloatval_t *x,
     system_instance->OStream() << buffer;
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
-             "  System Energy : %15.5E [Hartree]", fx);
+             "  Interaction Energy : %15.5E [Hartree]", fx);
     system_instance->OStream() << buffer << std::endl;
     
     snprintf(buffer, MAX_PRINT_BUFFER_SIZE,
-             "  Gradient Norm : %15.5E", gnorm);
+             "  Gradient Norm      : %15.5E", gnorm);
     system_instance->OStream() << buffer << std::endl << std::endl;
     
     std::chrono::steady_clock::time_point clock_now =

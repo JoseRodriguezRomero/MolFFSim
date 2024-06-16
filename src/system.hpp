@@ -63,6 +63,7 @@ private:
     std::vector<double> box_side_len;
     
     unsigned system_charge;
+    double uncorr_energy;
     
     unsigned n_cores;
     Eigen::Vector<T,Eigen::Dynamic> sys_params;
@@ -107,7 +108,7 @@ public:
     EnergyFromParams(const Eigen::Vector<T,Eigen::Dynamic> &sys_params) {
         SetSysParams(sys_params);
         
-        T energy = SystemEnergy();
+        T energy = SystemInteractionEnergy();
         for (unsigned i = 0; i < relax_molecules.size(); i++) {
             T aux_sum = -1.0;
             aux_sum += pow(sys_params(i*7 + 3),2);
@@ -156,7 +157,9 @@ public:
     void PolarizeMolecules() const;
 
     T SystemEnergy() const;
-    T SystemInteractionEnergy() const;
+    inline T SystemInteractionEnergy() const {
+        return SystemEnergy() - uncorr_energy;
+    }
     
     std::vector<std::string> ListMoleculeTypes() const;
     unsigned MoleculeInstances(const std::string &molec_name) const;
