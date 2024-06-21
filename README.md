@@ -12,7 +12,7 @@
 # MolFFSim
 MolFFSim is an open-source program coded in C++ specifically designed for performing point-energy calculations of systems with one or many molecules, as well as optimizing their geometry by minimizing the energy. In the latter, all molecules are treated as rigid objects. The theoretical framework for the calculations in this program is rooted in the Orbital Free Density Functional Theory (OFDFT) approach, as detailed in the following references:
   * [*J. Phys. Chem. A,* 128, 6, 1163–1172 (2024)](https://pubs.acs.org/doi/10.1021/acs.jpca.3c06724)
-  * [*J. Chem. Phys.* Accepted (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
+  * [*J. Chem. Phys.*, 160, 23, 235101 (2024)](https://doi.org/10.1063/5.0210949)
 
 Exact values of gradients and Hessians of interaction energies are obtained using algorithmic differentiation via [autodiff](https://autodiff.github.io/). Currently, only forward mode automatic differentiation is supported. All the linear algebra necessary for calculations within this program is handled using [Eigen](https://gitlab.com/libeigen/eigen). Parallelization is achieved using [OpenMP](https://www.openmp.org/). All non-linear minimizations problems, related to both kinds of geometry optimizations supported in this program, are handled through [libLBFGS](https://www.chokkan.org/software/liblbfgs/).
 
@@ -149,10 +149,13 @@ If you find this program useful please consider citing the following sources, th
 }
 @article{Romero2024b,
    author = {José Romero and Paulo Limão-Vieira and Thana Maihom and Kersti Hermansson and Michael Probst},
-   doi = {10.26434/chemrxiv-2024-t5tfh-v2},
-   journal = {ChemRxiv},
+   doi = {10.1063/5.0210949},
+   issn = {0021-9606},
+   issue = {23},
+   journal = {The Journal of Chemical Physics},
+   month = {6},
+   title = {A polarizable valence electron density based force field for high-energy interactions between atoms and molecules},
+   volume = {160},
    year = {2024},
-   month = {3},
-   title = {A Polarizable Valence Electron Density Based Force Field for High-Energy Interactions between Atoms and Molecules},
 }
 ```

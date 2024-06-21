@@ -13,6 +13,6 @@ For eigendensities calculated with an [Effective Core Potential (ECP)](https://m
    * **Coverage:** All the elements in the first three rows of the periodic table.
 
  * `fulle_collection_1`
-   * **Reference:** [*J. Chem. Phys.* Accepted (2024)](https://doi.org/10.26434/chemrxiv-2024-t5tfh-v2)
+   * **Reference:** [*J. Chem. Phys.*, 160, 23, 235101 (2024)](https://doi.org/10.1063/5.0210949)
    * **Type:** Full electron
    * **Coverage:** All the elements in the first three rows of the periodic table.
