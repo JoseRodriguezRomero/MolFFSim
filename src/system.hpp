@@ -62,7 +62,7 @@ private:
     std::vector<bool> is_periodic;
     std::vector<double> box_side_len;
     
-    unsigned system_charge;
+    int system_charge;
     double uncorr_energy;
     
     unsigned n_cores;

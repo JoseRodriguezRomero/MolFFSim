@@ -1,5 +1,5 @@
 n_cores              11
-system_charge        0
+system_charge        -1
 is_periodic          false false false
 periodic_box_sizes   300 300 300
 atomic_basis         ecp_collection_1
